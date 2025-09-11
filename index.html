@@ -1,9 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Verification</title>
+    <!-- Link to the Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Theme color for the browser UI -->
+    <meta name="theme-color" content="#ffffff">
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter -->
@@ -15,8 +19,6 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            /* A simple background color for areas outside the app frame (on tablets/desktops) */
-            background-color: #f3f4f6;
         }
         
         /* --- Animation Classes --- */
@@ -82,160 +84,170 @@
         }
     </style>
 </head>
-<body class="antialiased text-gray-800">
+<body class="antialiased text-gray-800 bg-gray-100 h-full flex flex-col">
 
-    <!-- Mobile App Container -->
-    <div class="w-full max-w-md mx-auto bg-gray-100 flex flex-col h-screen overflow-hidden sm:rounded-3xl sm:shadow-2xl sm:my-4 sm:h-[95vh] sm:max-h-[850px]">
-        <!-- Header -->
-        <header class="text-center p-4 border-b bg-white/70 backdrop-blur-lg sm:rounded-t-3xl flex-shrink-0 flex items-center justify-center space-x-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            <h1 class="text-xl font-bold text-gray-900">Product Authenticator</h1>
-        </header>
+    <!-- Header -->
+    <header class="text-center p-4 border-b bg-white/70 backdrop-blur-lg flex-shrink-0 flex items-center justify-center space-x-2 w-full shadow-sm sticky top-0 z-10">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <h1 class="text-xl font-bold text-gray-900">Product Authenticator</h1>
+    </header>
 
-        <main id="app" class="flex-grow overflow-y-auto p-6 space-y-6">
-            <!-- Initial View: Input and Scan options -->
-            <div id="initial-view" class="bg-white p-6 rounded-2xl shadow-lg transition-all swoosh-in">
-                <!-- Manual ID Input -->
-                <div class="mb-4">
-                    <label for="productId" class="block text-sm font-medium text-gray-700 mb-1">Enter Unique Product ID</label>
-                    <div class="flex space-x-2">
-                        <input type="text" id="productId" class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner" placeholder="e.g., PROD-123-XYZ">
-                        <button id="verify-btn" class="btn-primary whitespace-nowrap">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            Verify
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center text-gray-400 my-4">
-                    <div class="flex-grow border-t border-gray-300"></div>
-                    <span class="flex-shrink mx-4 text-xs font-semibold">OR</span>
-                    <div class="flex-grow border-t border-gray-300"></div>
-                </div>
-
-                <!-- QR Scanner Section -->
-                <div id="scanner-section">
-                    <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center pulse-once">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
-                        Scan QR Code
+    <!-- Main Content Area -->
+    <main id="app" class="flex-grow w-full max-w-3xl mx-auto p-6 space-y-6">
+        <!-- Initial View: Input and Scan options -->
+        <div id="initial-view" class="bg-white p-6 rounded-2xl shadow-lg transition-all swoosh-in">
+            <!-- Manual ID Input -->
+            <div class="mb-4">
+                <label for="productId" class="block text-sm font-medium text-gray-700 mb-1">Enter Unique Product ID</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="productId" class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner" placeholder="e.g., PROD-123-XYZ">
+                    <button id="verify-btn" class="btn-primary whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        Verify
                     </button>
-                    <div id="qr-reader" class="mt-4 w-full mx-auto" style="display: none;"></div>
-                    <div id="qr-scan-result" class="text-center mt-2"></div>
                 </div>
             </div>
 
-            <!-- Status/Error View -->
-            <div id="status-view" class="text-center p-6 bg-white rounded-2xl shadow-lg" style="display: none;">
-                <p id="status-message" class="text-lg font-medium"></p>
+            <div class="flex items-center text-gray-400 my-4">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink mx-4 text-xs font-semibold">OR</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <!-- QR Scanner Section -->
+            <div id="scanner-section">
+                <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center pulse-once">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
+                    Scan QR Code
+                </button>
+                <div id="qr-reader" class="mt-4 w-full mx-auto" style="display: none;"></div>
+                <div id="qr-scan-result" class="text-center mt-2"></div>
+            </div>
+        </div>
+
+        <!-- Status/Error View -->
+        <div id="status-view" class="text-center p-6 bg-white rounded-2xl shadow-lg" style="display: none;">
+            <p id="status-message" class="text-lg font-medium"></p>
+        </div>
+        
+        <!-- Result View: Product Details -->
+        <div id="result-view" class="space-y-6" style="display: none;">
+            <!-- Product Details Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 100ms;">
+                <div class="flex flex-col">
+                    <img id="product-image" src="" alt="Product Image" class="w-full h-auto object-cover rounded-xl mb-4 flex-shrink-0 shadow-md">
+                    <div class="flex-grow">
+                        <h2 id="product-name" class="text-2xl font-bold mb-2"></h2>
+                        <p id="product-description" class="text-gray-600 mb-4 text-sm"></p>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-gray-50 p-3 rounded-xl border">
+                                <span class="font-semibold text-gray-500 block">Serial Number</span>
+                                <span id="product-serial" class="font-mono"></span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-xl border">
+                                <span class="font-semibold text-gray-500 block">Manufacture Date</span>
+                                <span id="product-mfg-date"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Digital Certificate Card -->
+            <div class="certificate-bg border-2 border-blue-200 p-6 rounded-2xl shadow-lg relative overflow-hidden fade-in-up" style="animation-delay: 200ms;">
+                <div class="flex items-center mb-4">
+                    <svg class="w-12 h-12 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800">Digital Authentication Certificate</h3>
+                        <p class="text-green-700 font-semibold">Product Verified & Authentic</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-600">This certifies that the product with the specified serial number has been authenticated through our secure verification system.</p>
+            </div>
+
+            <!-- Product Journey Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 300ms;">
+                 <div class="flex items-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M2 17L4.08 11.13a2 2 0 0 1 1.76-1.13H14a2 2 0 0 1 2 2v4H2Z"></path><path d="M14 9.5h5.31a2 2 0 0 1 1.76 1.13L22 17H14Z"></path><path d="M2 17v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1"></path><circle cx="7" cy="20" r="2"></circle><circle cx="17" cy="20" r="2"></circle></svg>
+                    <h3 class="text-lg font-semibold">Product Journey</h3>
+                </div>
+                <div id="product-history" class="relative border-l-2 border-blue-200 ml-3 space-y-6">
+                    <!-- History items will be injected here by JS -->
+                </div>
+            </div>
+
+            <!-- Ingredients/Components Card -->
+             <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 400ms;">
+                 <div class="flex items-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M15.4 2a2 2 0 0 1 2.2 3.8l-1.4 1.4A2 2 0 1 1 12.4 3l1.4-1.4A2 2 0 0 1 15.4 2z"></path><path d="m21.4 12.6-6-6a2 2 0 0 0-2.8 0L2.2 17a2 2 0 0 0 0 2.8l6 6a2 2 0 0 0 2.8 0l10.4-10.4a2 2 0 0 0 0-2.8z"></path><path d="m14.5 7.5 3 3"></path></svg>
+                    <h3 class="text-lg font-semibold">Key Components / Ingredients</h3>
+                </div>
+                 <div id="product-ingredients" class="flex flex-wrap gap-2">
+                    <!-- Ingredient tags will be injected here by JS -->
+                </div>
+            </div>
+
+
+            <!-- Manufacturer Signature Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 500ms;">
+                 <div class="flex items-center mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="m12 14 4 6 2-2-4-6-2 2"></path><path d="M12 14l-1.5 1.5"></path></svg>
+                    <h3 class="text-lg font-semibold">Manufacturer's Digital Signature</h3>
+                </div>
+                <div id="emudra-signature-block" class="border-2 border-green-300 bg-green-50/50 p-4 rounded-xl flex items-start space-x-4">
+                    <div class="text-center flex-shrink-0 pt-1">
+                       <svg class="w-12 h-12 text-green-600 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.965 8.521C19.988 8.347 20 8.173 20 8c0-2.21-1.79-4-4-4-1.293 0-2.438.616-3.16 1.574A3.984 3.984 0 008 4c-2.21 0-4 1.79-4 4 0 .173.012.347.035.521A6.996 6.996 0 001 15c0 3.866 3.134 7 7 7h8c3.866 0 7-3.134 7-7a6.996 6.996 0 00-3.035-6.479zM15 15H9v-2h6v2zm-1-4H9V9h5v2z"></path></svg>
+                       <p class="text-xs font-bold text-green-800 mt-1">e-Mudra</p>
+                    </div>
+                     <div class="flex-grow">
+                       <p class="font-semibold text-gray-800">Digitally Signed by: <span id="sig-signer" class="font-normal"></span></p>
+                       <p class="text-sm text-gray-600">Timestamp: <span id="sig-timestamp" class="font-mono text-xs"></span></p>
+                       <p class="text-sm text-gray-600 mt-2">Signature Value:</p>
+                        <div class="flex items-center bg-gray-100 p-2 rounded-lg mt-1">
+                            <pre id="manufacturer-signature" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
+                            <button id="copy-sig-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <!-- Result View: Product Details -->
-            <div id="result-view" class="space-y-6" style="display: none;">
-                <!-- Product Details Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 100ms;">
-                    <div class="flex flex-col">
-                        <img id="product-image" src="" alt="Product Image" class="w-full h-auto object-cover rounded-xl mb-4 flex-shrink-0 shadow-md">
-                        <div class="flex-grow">
-                            <h2 id="product-name" class="text-2xl font-bold mb-2"></h2>
-                            <p id="product-description" class="text-gray-600 mb-4 text-sm"></p>
-                            <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div class="bg-gray-50 p-3 rounded-xl border">
-                                    <span class="font-semibold text-gray-500 block">Serial Number</span>
-                                    <span id="product-serial" class="font-mono"></span>
-                                </div>
-                                <div class="bg-gray-50 p-3 rounded-xl border">
-                                    <span class="font-semibold text-gray-500 block">Manufacture Date</span>
-                                    <span id="product-mfg-date"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Digital Certificate Card -->
-                <div class="certificate-bg border-2 border-blue-200 p-6 rounded-2xl shadow-lg relative overflow-hidden fade-in-up" style="animation-delay: 200ms;">
-                    <div class="flex items-center mb-4">
-                        <svg class="w-12 h-12 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                        <div>
-                            <h3 class="text-xl font-bold text-gray-800">Digital Authentication Certificate</h3>
-                            <p class="text-green-700 font-semibold">Product Verified & Authentic</p>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-600">This certifies that the product with the specified serial number has been authenticated through our secure verification system.</p>
-                </div>
-
-                <!-- Product Journey Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 300ms;">
-                     <div class="flex items-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M2 17L4.08 11.13a2 2 0 0 1 1.76-1.13H14a2 2 0 0 1 2 2v4H2Z"></path><path d="M14 9.5h5.31a2 2 0 0 1 1.76 1.13L22 17H14Z"></path><path d="M2 17v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1"></path><circle cx="7" cy="20" r="2"></circle><circle cx="17" cy="20" r="2"></circle></svg>
-                        <h3 class="text-lg font-semibold">Product Journey</h3>
-                    </div>
-                    <div id="product-history" class="relative border-l-2 border-blue-200 ml-3 space-y-6">
-                        <!-- History items will be injected here by JS -->
-                    </div>
-                </div>
-
-                <!-- Ingredients/Components Card -->
-                 <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 400ms;">
-                     <div class="flex items-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M15.4 2a2 2 0 0 1 2.2 3.8l-1.4 1.4A2 2 0 1 1 12.4 3l1.4-1.4A2 2 0 0 1 15.4 2z"></path><path d="m21.4 12.6-6-6a2 2 0 0 0-2.8 0L2.2 17a2 2 0 0 0 0 2.8l6 6a2 2 0 0 0 2.8 0l10.4-10.4a2 2 0 0 0 0-2.8z"></path><path d="m14.5 7.5 3 3"></path></svg>
-                        <h3 class="text-lg font-semibold">Key Components / Ingredients</h3>
-                    </div>
-                     <div id="product-ingredients" class="flex flex-wrap gap-2">
-                        <!-- Ingredient tags will be injected here by JS -->
-                    </div>
-                </div>
-
-
-                <!-- Manufacturer Signature Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 500ms;">
-                     <div class="flex items-center mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="m12 14 4 6 2-2-4-6-2 2"></path><path d="M12 14l-1.5 1.5"></path></svg>
-                        <h3 class="text-lg font-semibold">Manufacturer's Digital Signature</h3>
-                    </div>
-                    <div id="emudra-signature-block" class="border-2 border-green-300 bg-green-50/50 p-4 rounded-xl flex items-start space-x-4">
-                        <div class="text-center flex-shrink-0 pt-1">
-                           <svg class="w-12 h-12 text-green-600 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.965 8.521C19.988 8.347 20 8.173 20 8c0-2.21-1.79-4-4-4-1.293 0-2.438.616-3.16 1.574A3.984 3.984 0 008 4c-2.21 0-4 1.79-4 4 0 .173.012.347.035.521A6.996 6.996 0 001 15c0 3.866 3.134 7 7 7h8c3.866 0 7-3.134 7-7a6.996 6.996 0 00-3.035-6.479zM15 15H9v-2h6v2zm-1-4H9V9h5v2z"></path></svg>
-                           <p class="text-xs font-bold text-green-800 mt-1">e-Mudra</p>
-                        </div>
-                         <div class="flex-grow">
-                           <p class="font-semibold text-gray-800">Digitally Signed by: <span id="sig-signer" class="font-normal"></span></p>
-                           <p class="text-sm text-gray-600">Timestamp: <span id="sig-timestamp" class="font-mono text-xs"></span></p>
-                           <p class="text-sm text-gray-600 mt-2">Signature Value:</p>
-                            <div class="flex items-center bg-gray-100 p-2 rounded-lg mt-1">
-                                <pre id="manufacturer-signature" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
-                                <button id="copy-sig-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
-                                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Blockchain Hash Card -->
-                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 600ms;">
-                    <h3 class="text-lg font-semibold mb-2">Blockchain Verification Hash</h3>
-                    <p class="text-sm text-gray-500 mb-3">This immutable hash represents the product's authentication record on the blockchain.</p>
-                    <div class="flex items-center bg-gray-100 p-2 rounded-lg">
-                        <pre id="product-hash" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
-                        <button id="copy-hash-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
-                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="text-center pt-4 fade-in-up" style="animation-delay: 700ms;">
-                     <button id="reset-btn" class="btn-secondary">Scan Another Product</button>
+            <!-- Blockchain Hash Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 600ms;">
+                <h3 class="text-lg font-semibold mb-2">Blockchain Verification Hash</h3>
+                <p class="text-sm text-gray-500 mb-3">This immutable hash represents the product's authentication record on the blockchain.</p>
+                <div class="flex items-center bg-gray-100 p-2 rounded-lg">
+                    <pre id="product-hash" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
+                    <button id="copy-hash-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
                 </div>
             </div>
-        </main>
 
-        <footer class="text-center p-4 text-xs text-gray-400 flex-shrink-0 bg-white/70 border-t sm:rounded-b-3xl">
-            <p>&copy; 2025 AuthentiChain Inc. All rights reserved.</p>
-        </footer>
-    </div>
+            <div class="text-center pt-4 fade-in-up" style="animation-delay: 700ms;">
+                 <button id="reset-btn" class="btn-secondary">Scan Another Product</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center p-4 text-xs text-gray-400 flex-shrink-0 bg-white/70 border-t w-full mt-auto">
+        <p>&copy; 2025 AuthentiChain Inc. All rights reserved.</p>
+    </footer>
     
     <script>
+        // Script to register the service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                }, err => {
+                    console.log('ServiceWorker registration failed: ', err);
+                });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM ELEMENTS ---
             const initialView = document.getElementById('initial-view');
