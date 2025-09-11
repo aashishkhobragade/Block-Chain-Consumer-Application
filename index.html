@@ -15,54 +15,91 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            /* Changed background for mobile app feel */
-            background-color: #e5e7eb;
+            /* A simple background color for areas outside the app frame (on tablets/desktops) */
+            background-color: #f3f4f6;
         }
-        /* Custom styles for animations and certificate */
-        .fade-in {
-            animation: fadeIn 0.5s ease-in-out;
+        
+        /* --- Animation Classes --- */
+        .swoosh-in {
+            animation: swooshIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .fade-in-up {
+            animation: fadeInUp 0.5s ease-out both;
         }
+        
+        @keyframes swooshIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .pulse-once {
+            animation: pulse-animation 1.5s ease-out;
+        }
+        
+        @keyframes pulse-animation {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- UI Polish --- */
         .certificate-bg {
             background-image:
                 linear-gradient(135deg, rgba(236, 248, 255, 0.8) 0%, rgba(224, 242, 254, 0.8) 100%),
                 url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a1c4fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
         #qr-reader video {
-            border-radius: 0.5rem;
-            border: 2px dashed #9ca3af;
+            border-radius: 0.75rem; /* Increased rounding */
+            border: 3px dashed #9ca3af;
         }
         .scanner-active {
-            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+            border-color: #3b82f6;
+            transition: box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
         }
         .btn-primary {
-            @apply bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-300 transform hover:-translate-y-0.5;
+            @apply bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl;
         }
         .btn-secondary {
-            @apply bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition-all duration-300;
+            @apply bg-white text-gray-700 font-bold py-3 px-6 rounded-xl border border-gray-300 hover:bg-gray-100 hover:border-gray-400 transition-all duration-300 transform hover:-translate-y-0.5;
         }
     </style>
 </head>
-<body class="antialiased text-gray-800 flex items-center justify-center min-h-screen">
+<body class="antialiased text-gray-800">
 
     <!-- Mobile App Container -->
-    <div class="w-full max-w-md mx-auto bg-slate-50 rounded-3xl shadow-2xl flex flex-col h-[95vh] max-h-[850px] overflow-hidden">
+    <div class="w-full max-w-md mx-auto bg-gray-100 flex flex-col h-screen overflow-hidden sm:rounded-3xl sm:shadow-2xl sm:my-4 sm:h-[95vh] sm:max-h-[850px]">
         <!-- Header -->
-        <header class="text-center p-4 border-b bg-white/80 backdrop-blur-sm rounded-t-3xl flex-shrink-0">
+        <header class="text-center p-4 border-b bg-white/70 backdrop-blur-lg sm:rounded-t-3xl flex-shrink-0 flex items-center justify-center space-x-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
             <h1 class="text-xl font-bold text-gray-900">Product Authenticator</h1>
         </header>
 
         <main id="app" class="flex-grow overflow-y-auto p-6 space-y-6">
             <!-- Initial View: Input and Scan options -->
-            <div id="initial-view" class="bg-white p-6 rounded-xl shadow-lg transition-all">
+            <div id="initial-view" class="bg-white p-6 rounded-2xl shadow-lg transition-all swoosh-in">
                 <!-- Manual ID Input -->
                 <div class="mb-4">
                     <label for="productId" class="block text-sm font-medium text-gray-700 mb-1">Enter Unique Product ID</label>
                     <div class="flex space-x-2">
-                        <input type="text" id="productId" class="flex-grow w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., PROD-123-XYZ">
+                        <input type="text" id="productId" class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner" placeholder="e.g., PROD-123-XYZ">
                         <button id="verify-btn" class="btn-primary whitespace-nowrap">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             Verify
@@ -70,11 +107,15 @@
                     </div>
                 </div>
 
-                <div class="text-center text-gray-500 my-4">OR</div>
+                <div class="flex items-center text-gray-400 my-4">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-xs font-semibold">OR</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
 
                 <!-- QR Scanner Section -->
                 <div id="scanner-section">
-                    <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center">
+                    <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center pulse-once">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
                         Scan QR Code
                     </button>
@@ -84,25 +125,25 @@
             </div>
 
             <!-- Status/Error View -->
-            <div id="status-view" class="text-center p-6 bg-white rounded-xl shadow-lg" style="display: none;">
+            <div id="status-view" class="text-center p-6 bg-white rounded-2xl shadow-lg" style="display: none;">
                 <p id="status-message" class="text-lg font-medium"></p>
             </div>
             
             <!-- Result View: Product Details -->
-            <div id="result-view" class="fade-in space-y-6" style="display: none;">
+            <div id="result-view" class="space-y-6" style="display: none;">
                 <!-- Product Details Card -->
-                <div class="bg-white p-6 rounded-xl shadow-lg">
-                    <div class="flex flex-col md:flex-row md:space-x-6">
-                        <img id="product-image" src="" alt="Product Image" class="w-full md:w-40 h-auto object-cover rounded-lg mb-4 md:mb-0 flex-shrink-0">
+                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 100ms;">
+                    <div class="flex flex-col">
+                        <img id="product-image" src="" alt="Product Image" class="w-full h-auto object-cover rounded-xl mb-4 flex-shrink-0 shadow-md">
                         <div class="flex-grow">
                             <h2 id="product-name" class="text-2xl font-bold mb-2"></h2>
                             <p id="product-description" class="text-gray-600 mb-4 text-sm"></p>
                             <div class="grid grid-cols-2 gap-4 text-sm">
-                                <div class="bg-gray-50 p-3 rounded-lg">
+                                <div class="bg-gray-50 p-3 rounded-xl border">
                                     <span class="font-semibold text-gray-500 block">Serial Number</span>
                                     <span id="product-serial" class="font-mono"></span>
                                 </div>
-                                <div class="bg-gray-50 p-3 rounded-lg">
+                                <div class="bg-gray-50 p-3 rounded-xl border">
                                     <span class="font-semibold text-gray-500 block">Manufacture Date</span>
                                     <span id="product-mfg-date"></span>
                                 </div>
@@ -111,19 +152,8 @@
                     </div>
                 </div>
 
-                 <!-- ✨ AI Assistant Button -->
-                <div class="bg-white p-4 rounded-xl shadow-lg">
-                    <button id="ai-assistant-btn" class="w-full text-left p-4 rounded-lg bg-gradient-to-r from-violet-500 to-indigo-600 text-white flex items-center justify-between hover:shadow-xl transition-shadow">
-                        <div>
-                            <p class="font-bold text-lg">✨ Ask AI About This Product</p>
-                            <p class="text-sm opacity-90">Get care instructions, style tips & more!</p>
-                        </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="m9 18 6-6-6-6"></path></svg>
-                    </button>
-                </div>
-
                 <!-- Digital Certificate Card -->
-                <div class="certificate-bg border-2 border-blue-200 p-6 rounded-xl shadow-lg relative overflow-hidden">
+                <div class="certificate-bg border-2 border-blue-200 p-6 rounded-2xl shadow-lg relative overflow-hidden fade-in-up" style="animation-delay: 200ms;">
                     <div class="flex items-center mb-4">
                         <svg class="w-12 h-12 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                         <div>
@@ -135,7 +165,7 @@
                 </div>
 
                 <!-- Product Journey Card -->
-                <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 300ms;">
                      <div class="flex items-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M2 17L4.08 11.13a2 2 0 0 1 1.76-1.13H14a2 2 0 0 1 2 2v4H2Z"></path><path d="M14 9.5h5.31a2 2 0 0 1 1.76 1.13L22 17H14Z"></path><path d="M2 17v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1"></path><circle cx="7" cy="20" r="2"></circle><circle cx="17" cy="20" r="2"></circle></svg>
                         <h3 class="text-lg font-semibold">Product Journey</h3>
@@ -146,7 +176,7 @@
                 </div>
 
                 <!-- Ingredients/Components Card -->
-                 <div class="bg-white p-6 rounded-xl shadow-lg">
+                 <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 400ms;">
                      <div class="flex items-center mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M15.4 2a2 2 0 0 1 2.2 3.8l-1.4 1.4A2 2 0 1 1 12.4 3l1.4-1.4A2 2 0 0 1 15.4 2z"></path><path d="m21.4 12.6-6-6a2 2 0 0 0-2.8 0L2.2 17a2 2 0 0 0 0 2.8l6 6a2 2 0 0 0 2.8 0l10.4-10.4a2 2 0 0 0 0-2.8z"></path><path d="m14.5 7.5 3 3"></path></svg>
                         <h3 class="text-lg font-semibold">Key Components / Ingredients</h3>
@@ -158,12 +188,12 @@
 
 
                 <!-- Manufacturer Signature Card -->
-                <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 500ms;">
                      <div class="flex items-center mb-3">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="m12 14 4 6 2-2-4-6-2 2"></path><path d="M12 14l-1.5 1.5"></path></svg>
                         <h3 class="text-lg font-semibold">Manufacturer's Digital Signature</h3>
                     </div>
-                    <div id="emudra-signature-block" class="border-2 border-green-300 bg-green-50/50 p-4 rounded-lg flex items-start space-x-4">
+                    <div id="emudra-signature-block" class="border-2 border-green-300 bg-green-50/50 p-4 rounded-xl flex items-start space-x-4">
                         <div class="text-center flex-shrink-0 pt-1">
                            <svg class="w-12 h-12 text-green-600 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.965 8.521C19.988 8.347 20 8.173 20 8c0-2.21-1.79-4-4-4-1.293 0-2.438.616-3.16 1.574A3.984 3.984 0 008 4c-2.21 0-4 1.79-4 4 0 .173.012.347.035.521A6.996 6.996 0 001 15c0 3.866 3.134 7 7 7h8c3.866 0 7-3.134 7-7a6.996 6.996 0 00-3.035-6.479zM15 15H9v-2h6v2zm-1-4H9V9h5v2z"></path></svg>
                            <p class="text-xs font-bold text-green-800 mt-1">e-Mudra</p>
@@ -183,7 +213,7 @@
                 </div>
                 
                 <!-- Blockchain Hash Card -->
-                <div class="bg-white p-6 rounded-xl shadow-lg">
+                <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 600ms;">
                     <h3 class="text-lg font-semibold mb-2">Blockchain Verification Hash</h3>
                     <p class="text-sm text-gray-500 mb-3">This immutable hash represents the product's authentication record on the blockchain.</p>
                     <div class="flex items-center bg-gray-100 p-2 rounded-lg">
@@ -194,41 +224,17 @@
                     </div>
                 </div>
 
-                <div class="text-center pt-4">
+                <div class="text-center pt-4 fade-in-up" style="animation-delay: 700ms;">
                      <button id="reset-btn" class="btn-secondary">Scan Another Product</button>
                 </div>
             </div>
         </main>
 
-        <footer class="text-center p-4 text-xs text-gray-400 flex-shrink-0 bg-white/80 border-t">
+        <footer class="text-center p-4 text-xs text-gray-400 flex-shrink-0 bg-white/70 border-t sm:rounded-b-3xl">
             <p>&copy; 2025 AuthentiChain Inc. All rights reserved.</p>
         </footer>
     </div>
     
-     <!-- AI Assistant Modal -->
-    <div id="ai-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style="display: none;">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col h-[80vh] max-h-[700px]">
-            <header class="p-4 border-b flex justify-between items-center">
-                <h2 class="text-lg font-bold">✨ Product AI Assistant</h2>
-                <button id="close-ai-modal-btn" class="p-2 rounded-full hover:bg-gray-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </header>
-            <div id="ai-chat-box" class="flex-grow p-4 overflow-y-auto space-y-4">
-                <!-- Chat messages will be appended here -->
-            </div>
-            <footer class="p-4 border-t">
-                <div class="flex space-x-2">
-                    <input type="text" id="ai-user-input" class="flex-grow w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Ask a question...">
-                    <button id="ai-send-btn" class="btn-primary flex-shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </button>
-                </div>
-            </footer>
-        </div>
-    </div>
-
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM ELEMENTS ---
@@ -244,19 +250,11 @@
             const copyHashBtn = document.getElementById('copy-hash-btn');
             const copySigBtn = document.getElementById('copy-sig-btn');
 
-            // AI Modal Elements
-            const aiAssistantBtn = document.getElementById('ai-assistant-btn');
-            const aiModal = document.getElementById('ai-modal');
-            const closeAiModalBtn = document.getElementById('close-ai-modal-btn');
-            const aiChatBox = document.getElementById('ai-chat-box');
-            const aiUserInput = document.getElementById('ai-user-input');
-            const aiSendBtn = document.getElementById('ai-send-btn');
-
             const qrReaderElement = document.getElementById('qr-reader');
             const qrScanResult = document.getElementById('qr-scan-result');
             
             let html5QrCode;
-            let currentProduct = null; // To store the currently viewed product for the AI
+            let currentProduct = null;
 
             // --- MOCK DATABASE ---
             // In a real application, this would be an API call to a backend service.
@@ -320,60 +318,6 @@
                 }
             };
 
-            // --- GEMINI API INTEGRATION ---
-            const API_KEY = ""; // No key needed when run in this environment
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
-            
-            async function callGeminiApi(product, query) {
-                // Add loading indicator
-                appendMessage('...', 'ai', true);
-
-                const systemPrompt = `You are a helpful and creative product expert for the "${product.name}".
-                    Product Description: "${product.description}".
-                    Key Components/Ingredients: "${product.ingredients.join(', ')}".
-                    Your role is to answer user questions about this specific product. Provide useful information, care instructions, or creative ideas like styling tips. Be friendly and conversational. Keep your answers concise and easy to read on a mobile screen.`;
-
-                const payload = {
-                    systemInstruction: {
-                        parts: [{ text: systemPrompt }]
-                    },
-                    contents: [{
-                        parts: [{ text: query }]
-                    }]
-                };
-
-                try {
-                    const response = await fetch(API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`API error: ${response.statusText}`);
-                    }
-
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
-                    // Remove loading indicator and show final answer
-                    const loadingElement = aiChatBox.querySelector('.loading');
-                    if (loadingElement) loadingElement.remove();
-                    
-                    if (text) {
-                        appendMessage(text, 'ai');
-                    } else {
-                        appendMessage('Sorry, I could not get a response. Please try again.', 'ai', false, true);
-                    }
-
-                } catch (error) {
-                    console.error("Gemini API call failed:", error);
-                    const loadingElement = aiChatBox.querySelector('.loading');
-                    if (loadingElement) loadingElement.remove();
-                    appendMessage(`Sorry, an error occurred: ${error.message}`, 'ai', false, true);
-                }
-            }
-
 
             // --- FUNCTIONS ---
             
@@ -394,7 +338,7 @@
                 setTimeout(() => {
                     const product = productDatabase[id.trim()];
                     if (product) {
-                        currentProduct = product; // Store for AI assistant
+                        currentProduct = product;
                         displayProductDetails(product);
                     } else {
                         currentProduct = null;
@@ -431,11 +375,12 @@
                 ingredientsContainer.innerHTML = ''; // Clear previous results
 
                 // Populate History
-                product.history.forEach(item => {
+                product.history.forEach((item, index) => {
                     const historyItem = document.createElement('div');
-                    historyItem.className = 'pl-8 relative';
+                    historyItem.className = 'pl-8 relative fade-in-up';
+                    historyItem.style.animationDelay = `${index * 100}ms`;
                     historyItem.innerHTML = `
-                        <div class="absolute -left-1.5 top-1 w-4 h-4 bg-blue-500 rounded-full border-4 border-white"></div>
+                        <div class="absolute -left-1.5 top-1 w-4 h-4 bg-blue-500 rounded-full border-4 border-white shadow"></div>
                         <p class="font-semibold text-gray-800">${item.status}</p>
                         <p class="text-sm text-gray-500">${item.location}</p>
                         <p class="text-xs text-gray-400 font-mono">${item.date}</p>
@@ -446,7 +391,7 @@
                 // Populate Ingredients
                 product.ingredients.forEach(item => {
                     const ingredientTag = document.createElement('span');
-                    ingredientTag.className = 'bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full';
+                    ingredientTag.className = 'bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm';
                     ingredientTag.textContent = item;
                     ingredientsContainer.appendChild(ingredientTag);
                 });
@@ -464,7 +409,7 @@
                 statusView.style.display = 'none';
                 resultView.style.display = 'none';
                 productIdInput.value = '';
-                currentProduct = null; // Clear current product
+                currentProduct = null;
                 qrReaderElement.style.display = 'none';
                 qrReaderElement.classList.remove('scanner-active');
                 scanQrBtn.disabled = false;
@@ -521,55 +466,6 @@
                 }
             }
             
-             // --- AI MODAL FUNCTIONS ---
-
-            function openAiModal() {
-                aiModal.style.display = 'flex';
-                aiChatBox.innerHTML = ''; // Clear previous chat
-                appendMessage(`Hi! I'm your AI assistant for the ${currentProduct.name}. How can I help you today?`, 'ai');
-            }
-
-            function closeAiModal() {
-                aiModal.style.display = 'none';
-            }
-            
-            function appendMessage(text, sender, isLoading = false, isError = false) {
-                const messageDiv = document.createElement('div');
-                let messageClasses = 'p-3 rounded-lg max-w-xs md:max-w-sm ';
-
-                if (sender === 'user') {
-                    messageClasses += 'bg-blue-500 text-white self-end';
-                } else {
-                    messageClasses += isError ? 'bg-red-100 text-red-800 self-start' : 'bg-gray-200 text-gray-800 self-start';
-                }
-                
-                if (isLoading) {
-                    messageDiv.classList.add('loading');
-                    messageDiv.innerHTML = `<div class="flex items-center space-x-2"><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse delay-75"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse delay-150"></div></div>`;
-                } else {
-                    messageDiv.textContent = text;
-                }
-                
-                messageDiv.className = messageClasses;
-
-                const wrapperDiv = document.createElement('div');
-                wrapperDiv.className = `w-full flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
-                wrapperDiv.appendChild(messageDiv);
-                
-                aiChatBox.appendChild(wrapperDiv);
-                aiChatBox.scrollTop = aiChatBox.scrollHeight; // Scroll to bottom
-            }
-
-            async function handleAiSend() {
-                const userInput = aiUserInput.value.trim();
-                if (userInput && currentProduct) {
-                    appendMessage(userInput, 'user');
-                    aiUserInput.value = '';
-                    await callGeminiApi(currentProduct, userInput);
-                }
-            }
-
-
             // --- EVENT LISTENERS ---
 
             // Verify button click
@@ -578,7 +474,9 @@
                 if (productId) {
                     findProduct(productId);
                 } else {
-                    alert('Please enter a Product ID.');
+                    // Simple validation feedback
+                    productIdInput.classList.add('border-red-500', 'ring-red-500');
+                    setTimeout(() => productIdInput.classList.remove('border-red-500', 'ring-red-500'), 2000);
                 }
             });
             
@@ -602,55 +500,24 @@
             resetBtn.addEventListener('click', resetApp);
             
             // Copy hash button click
-            copyHashBtn.addEventListener('click', () => {
+            copyHashBtn.addEventListener('click', (e) => {
                 const hashText = document.getElementById('product-hash').textContent;
-                // Using document.execCommand for iFrame compatibility
-                const textArea = document.createElement("textarea");
-                textArea.value = hashText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    copyHashBtn.title = 'Copied!';
-                    setTimeout(() => { copyHashBtn.title = 'Copy to Clipboard'; }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
-                    copyHashBtn.title = 'Copy failed';
-                }
-                document.body.removeChild(textArea);
+                navigator.clipboard.writeText(hashText).then(() => {
+                    e.currentTarget.title = 'Copied!';
+                    setTimeout(() => { e.currentTarget.title = 'Copy to Clipboard'; }, 2000);
+                });
             });
 
             // Copy signature button click
-            copySigBtn.addEventListener('click', () => {
+            copySigBtn.addEventListener('click', (e) => {
                 const sigText = document.getElementById('manufacturer-signature').textContent;
-                const textArea = document.createElement("textarea");
-                textArea.value = sigText;
-                document.body.appendChild(textArea);
-                textArea.select();
-                try {
-                    document.execCommand('copy');
-                    copySigBtn.title = 'Copied!';
-                    setTimeout(() => { copySigBtn.title = 'Copy to Clipboard'; }, 2000);
-                } catch (err) {
-                    console.error('Failed to copy text: ', err);
-                    copySigBtn.title = 'Copy failed';
-                }
-                document.body.removeChild(textArea);
-            });
-            
-            // AI Modal Listeners
-            aiAssistantBtn.addEventListener('click', openAiModal);
-            closeAiModalBtn.addEventListener('click', closeAiModal);
-            aiSendBtn.addEventListener('click', handleAiSend);
-            aiUserInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleAiSend();
-                }
+                 navigator.clipboard.writeText(sigText).then(() => {
+                    e.currentTarget.title = 'Copied!';
+                    setTimeout(() => { e.currentTarget.title = 'Copy to Clipboard'; }, 2000);
+                });
             });
         });
     </script>
 </body>
 </html>
-
-
 
