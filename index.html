@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Verification</title>
-    <!-- Link to the Web App Manifest -->
-    <link rel="manifest" href="manifest.json">
+    <!-- Link to the Web App Manifest (Updated Path) -->
+    <link rel="manifest" href="./manifest.json">
     <!-- Theme color for the browser UI -->
     <meta name="theme-color" content="#ffffff">
     <!-- Tailwind CSS for styling -->
@@ -240,7 +240,8 @@
         // Script to register the service worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').then(registration => {
+                // Updated path to be relative
+                navigator.serviceWorker.register('./sw.js').then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
                     console.log('ServiceWorker registration failed: ', err);
@@ -532,4 +533,5 @@
     </script>
 </body>
 </html>
+
 
