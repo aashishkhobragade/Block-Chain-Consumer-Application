@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Verification</title>
+    <!-- FIX: Added base tag to help resolve relative paths for manifest and service worker -->
+    <base href=".">
     <!-- Link to the Web App Manifest (Updated Path) -->
     <link rel="manifest" href="./manifest.json">
     <!-- Theme color for the browser UI -->
@@ -16,11 +18,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- QR Code Scanner Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
         
+        .card-glass {
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1.5rem; /* 24px */
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        
+        .header-glass {
+             background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
         /* --- Animation Classes --- */
         .swoosh-in {
             animation: swooshIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
@@ -51,110 +71,90 @@
             }
         }
         
-        .pulse-once {
-            animation: pulse-animation 1.5s ease-out;
+        #qr-reader video {
+            border-radius: 1rem;
+            border: 2px dashed rgba(0,0,0,0.1);
         }
         
-        @keyframes pulse-animation {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
-            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
-            100% { transform: scale(1); }
-        }
-
-        /* --- UI Polish --- */
-        .certificate-bg {
-            background-image:
-                linear-gradient(135deg, rgba(236, 248, 255, 0.8) 0%, rgba(224, 242, 254, 0.8) 100%),
-                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23a1c4fd' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-        }
-        #qr-reader video {
-            border-radius: 0.75rem; /* Increased rounding */
-            border: 3px dashed #9ca3af;
-        }
-        .scanner-active {
-            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
-            border-color: #3b82f6;
-            transition: box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
-        }
         .btn-primary {
-            @apply bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl;
+            @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1;
         }
         .btn-secondary {
-            @apply bg-white text-gray-700 font-bold py-3 px-6 rounded-xl border border-gray-300 hover:bg-gray-100 hover:border-gray-400 transition-all duration-300 transform hover:-translate-y-0.5;
+            @apply bg-white/70 text-gray-800 font-bold py-3 px-6 rounded-xl border border-white/30 hover:bg-white transition-all duration-300 transform hover:-translate-y-0.5;
+        }
+        .status-badge {
+             @apply text-xs font-semibold inline-block py-1 px-2.5 uppercase rounded-full;
         }
     </style>
 </head>
-<body class="antialiased text-gray-800 bg-gray-100 h-full flex flex-col">
+<body class="antialiased text-gray-800">
 
     <!-- Header -->
-    <header class="text-center p-4 border-b bg-white/70 backdrop-blur-lg flex-shrink-0 flex items-center justify-center space-x-2 w-full shadow-sm sticky top-0 z-10">
+    <header class="text-center p-4 border-b border-white/20 header-glass flex-shrink-0 flex items-center justify-center space-x-2 w-full shadow-sm sticky top-0 z-10">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
         <h1 class="text-xl font-bold text-gray-900">Product Authenticator</h1>
     </header>
 
     <!-- Main Content Area -->
-    <main id="app" class="flex-grow w-full max-w-3xl mx-auto p-6 space-y-6">
+    <main id="app" class="w-full max-w-3xl mx-auto p-6 space-y-6">
         <!-- Initial View: Input and Scan options -->
-        <div id="initial-view" class="bg-white p-6 rounded-2xl shadow-lg transition-all swoosh-in">
+        <div id="initial-view" class="card-glass p-8 transition-all swoosh-in">
             <!-- Manual ID Input -->
             <div class="mb-4">
-                <label for="productId" class="block text-sm font-medium text-gray-700 mb-1">Enter Unique Product ID</label>
-                <div class="flex space-x-2">
-                    <input type="text" id="productId" class="flex-grow w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner" placeholder="e.g., PROD-123-XYZ">
+                <label for="productId" class="block text-sm font-medium text-gray-700 mb-2">Enter Unique Item ID</label>
+                <div class="flex space-x-3">
+                    <input type="text" id="productId" class="flex-grow w-full px-4 py-3 bg-white/60 border border-white/30 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner placeholder-gray-500" placeholder="e.g., PROD-D410">
                     <button id="verify-btn" class="btn-primary whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9-.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                         Verify
                     </button>
                 </div>
             </div>
 
-            <div class="flex items-center text-gray-400 my-4">
-                <div class="flex-grow border-t border-gray-300"></div>
+            <div class="flex items-center text-gray-400 my-6">
+                <div class="flex-grow border-t border-white/20"></div>
                 <span class="flex-shrink mx-4 text-xs font-semibold">OR</span>
-                <div class="flex-grow border-t border-gray-300"></div>
+                <div class="flex-grow border-t border-white/20"></div>
             </div>
 
             <!-- QR Scanner Section -->
             <div id="scanner-section">
-                <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center pulse-once">
+                <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
                     Scan QR Code
                 </button>
                 <div id="qr-reader" class="mt-4 w-full mx-auto" style="display: none;"></div>
                 <div id="qr-scan-result" class="text-center mt-2"></div>
             </div>
+            
+            <!-- Product ID Table -->
+            <div id="product-id-table-container" class="mt-8 pt-6 border-t border-white/20">
+                 <h3 class="text-sm font-semibold text-gray-600 mb-3 text-center">Available Products</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-white/40">
+                            <tr>
+                                <th scope="col" class="px-4 py-2 rounded-l-lg">Supplier</th>
+                                <th scope="col" class="px-4 py-2 rounded-r-lg">Item ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="product-id-table-body">
+                             <tr class="border-b border-white/20"><td colspan="2" class="text-center p-4">Loading products...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Status/Error View -->
-        <div id="status-view" class="text-center p-6 bg-white rounded-2xl shadow-lg" style="display: none;">
+        <div id="status-view" class="card-glass text-center p-8" style="display: none;">
             <p id="status-message" class="text-lg font-medium"></p>
         </div>
         
         <!-- Result View: Product Details -->
         <div id="result-view" class="space-y-6" style="display: none;">
-            <!-- Product Details Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 100ms;">
-                <div class="flex flex-col">
-                    <img id="product-image" src="" alt="Product Image" class="w-full h-auto object-cover rounded-xl mb-4 flex-shrink-0 shadow-md">
-                    <div class="flex-grow">
-                        <h2 id="product-name" class="text-2xl font-bold mb-2"></h2>
-                        <p id="product-description" class="text-gray-600 mb-4 text-sm"></p>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="bg-gray-50 p-3 rounded-xl border">
-                                <span class="font-semibold text-gray-500 block">Serial Number</span>
-                                <span id="product-serial" class="font-mono"></span>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-xl border">
-                                <span class="font-semibold text-gray-500 block">Manufacture Date</span>
-                                <span id="product-mfg-date"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Digital Certificate Card -->
-            <div class="certificate-bg border-2 border-blue-200 p-6 rounded-2xl shadow-lg relative overflow-hidden fade-in-up" style="animation-delay: 200ms;">
+             <!-- Digital Certificate Card -->
+            <div class="card-glass border-2 border-blue-200 p-6 relative overflow-hidden fade-in-up" style="animation-delay: 100ms;">
                 <div class="flex items-center mb-4">
                     <svg class="w-12 h-12 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
                     <div>
@@ -162,77 +162,107 @@
                         <p class="text-green-700 font-semibold">Product Verified & Authentic</p>
                     </div>
                 </div>
-                <p class="text-sm text-gray-600">This certifies that the product with the specified serial number has been authenticated through our secure verification system.</p>
+                <p class="text-sm text-gray-600">This certifies that the product record has been authenticated against the blockchain transaction log.</p>
             </div>
 
-            <!-- Product Journey Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 300ms;">
-                 <div class="flex items-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M2 17L4.08 11.13a2 2 0 0 1 1.76-1.13H14a2 2 0 0 1 2 2v4H2Z"></path><path d="M14 9.5h5.31a2 2 0 0 1 1.76 1.13L22 17H14Z"></path><path d="M2 17v-1a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v1"></path><circle cx="7" cy="20" r="2"></circle><circle cx="17" cy="20" r="2"></circle></svg>
-                    <h3 class="text-lg font-semibold">Product Journey</h3>
+            <!-- Core Product Details -->
+            <div class="card-glass p-6 fade-in-up" style="animation-delay: 200ms;">
+                <div class="flex items-center mb-4 border-b border-white/30 pb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
+                    <h3 class="text-lg font-semibold">Core Product Details</h3>
                 </div>
-                <div id="product-history" class="relative border-l-2 border-blue-200 ml-3 space-y-6">
-                    <!-- History items will be injected here by JS -->
-                </div>
-            </div>
-
-            <!-- Ingredients/Components Card -->
-             <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 400ms;">
-                 <div class="flex items-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M15.4 2a2 2 0 0 1 2.2 3.8l-1.4 1.4A2 2 0 1 1 12.4 3l1.4-1.4A2 2 0 0 1 15.4 2z"></path><path d="m21.4 12.6-6-6a2 2 0 0 0-2.8 0L2.2 17a2 2 0 0 0 0 2.8l6 6a2 2 0 0 0 2.8 0l10.4-10.4a2 2 0 0 0 0-2.8z"></path><path d="m14.5 7.5 3 3"></path></svg>
-                    <h3 class="text-lg font-semibold">Key Components / Ingredients</h3>
-                </div>
-                 <div id="product-ingredients" class="flex flex-wrap gap-2">
-                    <!-- Ingredient tags will be injected here by JS -->
-                </div>
-            </div>
-
-
-            <!-- Manufacturer Signature Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 500ms;">
-                 <div class="flex items-center mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect><path d="m12 14 4 6 2-2-4-6-2 2"></path><path d="M12 14l-1.5 1.5"></path></svg>
-                    <h3 class="text-lg font-semibold">Manufacturer's Digital Signature</h3>
-                </div>
-                <div id="emudra-signature-block" class="border-2 border-green-300 bg-green-50/50 p-4 rounded-xl flex items-start space-x-4">
-                    <div class="text-center flex-shrink-0 pt-1">
-                       <svg class="w-12 h-12 text-green-600 mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19.965 8.521C19.988 8.347 20 8.173 20 8c0-2.21-1.79-4-4-4-1.293 0-2.438.616-3.16 1.574A3.984 3.984 0 008 4c-2.21 0-4 1.79-4 4 0 .173.012.347.035.521A6.996 6.996 0 001 15c0 3.866 3.134 7 7 7h8c3.866 0 7-3.134 7-7a6.996 6.996 0 00-3.035-6.479zM15 15H9v-2h6v2zm-1-4H9V9h5v2z"></path></svg>
-                       <p class="text-xs font-bold text-green-800 mt-1">e-Mudra</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div class="bg-white/40 p-3 rounded-xl border border-white/20">
+                        <span class="font-semibold text-gray-500 block">Item ID</span>
+                        <span id="item-id" class="font-mono text-base text-black"></span>
                     </div>
-                     <div class="flex-grow">
-                       <p class="font-semibold text-gray-800">Digitally Signed by: <span id="sig-signer" class="font-normal"></span></p>
-                       <p class="text-sm text-gray-600">Timestamp: <span id="sig-timestamp" class="font-mono text-xs"></span></p>
-                       <p class="text-sm text-gray-600 mt-2">Signature Value:</p>
-                        <div class="flex items-center bg-gray-100 p-2 rounded-lg mt-1">
-                            <pre id="manufacturer-signature" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
-                            <button id="copy-sig-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
-                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <div class="bg-white/40 p-3 rounded-xl border border-white/20">
+                        <span class="font-semibold text-gray-500 block">Serial Number</span>
+                        <span id="serial-no" class="font-mono"></span>
+                    </div>
+                     <div class="bg-white/40 p-3 rounded-xl border border-white/20 col-span-1 md:col-span-2">
+                        <span class="font-semibold text-gray-500 block">Supplier</span>
+                        <span id="supplier" class="text-base text-black"></span>
+                    </div>
+                    <div class="bg-white/40 p-3 rounded-xl border border-white/20 col-span-1 md:col-span-2">
+                        <span class="font-semibold text-gray-500 block">Timestamp</span>
+                        <span id="timestamp"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction and Compliance Details Card -->
+            <div class="card-glass p-6 fade-in-up" style="animation-delay: 300ms;">
+                 <div class="flex items-center mb-4 border-b border-white/30 pb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    <h3 class="text-lg font-semibold">Transaction & Compliance</h3>
+                </div>
+                <div class="space-y-4 text-sm">
+                    <div class="grid grid-cols-3 gap-x-4 items-center">
+                        <span class="font-semibold text-gray-500 col-span-1">Transaction ID</span>
+                        <div class="col-span-2 flex items-center">
+                            <span id="tx-id" class="font-mono text-xs text-gray-700 mr-2 truncate"></span>
+                            <button id="copy-tx-btn" class="p-1 rounded-md hover:bg-white/50 transition" title="Copy Transaction ID">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
                         </div>
+                    </div>
+                     <div class="grid grid-cols-3 gap-x-4">
+                        <span class="font-semibold text-gray-500 col-span-1">Customer</span>
+                        <span id="customer" class="col-span-2"></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-x-4">
+                        <span class="font-semibold text-gray-500 col-span-1">Order Status</span>
+                        <span id="order-status" class="col-span-2"></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-x-4">
+                        <span class="font-semibold text-gray-500 col-span-1">Compliance</span>
+                        <span id="compliance-checks" class="text-xs font-semibold text-green-700 col-span-2"></span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-x-4">
+                        <span class="font-semibold text-gray-500 col-span-1">Contract Status</span>
+                        <span id="contract-status" class="status-badge col-span-2"></span>
                     </div>
                 </div>
             </div>
             
             <!-- Blockchain Hash Card -->
-            <div class="bg-white p-6 rounded-2xl shadow-lg fade-in-up" style="animation-delay: 600ms;">
-                <h3 class="text-lg font-semibold mb-2">Blockchain Verification Hash</h3>
-                <p class="text-sm text-gray-500 mb-3">This immutable hash represents the product's authentication record on the blockchain.</p>
-                <div class="flex items-center bg-gray-100 p-2 rounded-lg">
-                    <pre id="product-hash" class="text-xs text-gray-700 font-mono break-all flex-grow whitespace-pre-wrap"></pre>
-                    <button id="copy-hash-btn" class="ml-4 p-2 rounded-md hover:bg-gray-200 transition" title="Copy to Clipboard">
-                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>
+            <div class="card-glass p-6 fade-in-up" style="animation-delay: 400ms;">
+                <div class="flex items-center mb-4 border-b border-white/30 pb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-600 mr-3"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
+                    <h3 class="text-lg font-semibold">Blockchain Verification</h3>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-sm text-gray-500 mb-1">Transaction Hash</p>
+                        <div class="flex items-center bg-white/40 p-2 rounded-lg border border-white/20">
+                            <pre id="product-hash" class="text-xs text-gray-700 font-mono break-all flex-grow truncate"></pre>
+                            <button id="copy-hash-btn" class="ml-4 p-2 rounded-md hover:bg-white/50 transition flex-shrink-0" title="Copy Hash">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                     <div class="grid grid-cols-2 gap-4 text-sm pt-2">
+                        <div class="bg-white/40 p-3 rounded-xl border border-white/20">
+                            <span class="font-semibold text-gray-500 block">Block Number</span>
+                            <span id="block-number" class="font-mono"></span>
+                        </div>
+                         <div class="bg-white/40 p-3 rounded-xl border border-white/20">
+                            <span class="font-semibold text-gray-500 block">Confirmations</span>
+                            <span id="confirmations" class="font-mono"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="text-center pt-4 fade-in-up" style="animation-delay: 700ms;">
+            <div class="text-center pt-4 fade-in-up" style="animation-delay: 500ms;">
                  <button id="reset-btn" class="btn-secondary">Scan Another Product</button>
             </div>
         </div>
     </main>
 
     <!-- Footer -->
-    <footer class="text-center p-4 text-xs text-gray-400 flex-shrink-0 bg-white/70 border-t w-full mt-auto">
+    <footer class="text-center p-4 text-xs text-gray-400 header-glass border-t border-white/20 w-full">
         <p>&copy; 2025 AuthentiChain Inc. All rights reserved.</p>
     </footer>
     
@@ -240,7 +270,6 @@
         // Script to register the service worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Updated path to be relative
                 navigator.serviceWorker.register('./sw.js').then(registration => {
                     console.log('ServiceWorker registration successful with scope: ', registration.scope);
                 }, err => {
@@ -261,80 +290,60 @@
             const scanQrBtn = document.getElementById('scan-qr-btn');
             const resetBtn = document.getElementById('reset-btn');
             const copyHashBtn = document.getElementById('copy-hash-btn');
-            const copySigBtn = document.getElementById('copy-sig-btn');
+            const copyTxBtn = document.getElementById('copy-tx-btn');
+            const tableBody = document.getElementById('product-id-table-body');
 
             const qrReaderElement = document.getElementById('qr-reader');
             const qrScanResult = document.getElementById('qr-scan-result');
             
             let html5QrCode;
-            let currentProduct = null;
 
-            // --- MOCK DATABASE ---
-            // In a real application, this would be an API call to a backend service.
-            const productDatabase = {
-                "PROD-123-XYZ": {
-                    name: "Chronos Tourbillon Watch",
-                    description: "A masterpiece of mechanical engineering, featuring a gravity-defying tourbillon and a sapphire crystal case. Precision and elegance combined.",
-                    serial: "SN-A78B3C",
-                    mfgDate: "2025-03-15",
-                    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=1000&auto=format&fit=crop",
-                    hash: "0x4a2e8c6b7f9d1a3c5e8b0f7d2a6c9e1b4f3d7a9c8b6e2d1f0a5c8b7e4d3f2a1b",
-                    manufacturerSignature: {
-                        signer: "Dr. Alistair Finch (Head of Quality)",
-                        timestamp: "2025-03-15T10:30:00Z",
-                        value: "f4d3a2e1c9b8f7d6e5a4b3c2d1e0f9a8c7b6a5e4d3c2b1a0"
-                    },
-                    history: [
-                        { status: "Manufactured", date: "2025-03-15", location: "Geneva, CH" },
-                        { status: "Shipped to Distributor", date: "2025-03-20", location: "Global Logistics Hub" },
-                        { status: "In Retail", date: "2025-04-01", location: "Mumbai, IN" }
-                    ],
-                    ingredients: ["Sapphire Crystal", "316L Stainless Steel", "Tourbillon Movement", "Italian Leather"]
-                },
-                "PROD-456-ABC": {
-                    name: "Aura Noise-Cancelling Headphones",
-                    description: "Immerse yourself in pure sound with our state-of-the-art active noise cancellation technology. 40-hour battery life and plush comfort.",
-                    serial: "SN-F45G6H",
-                    mfgDate: "2025-05-20",
-                    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=1000&auto=format&fit=crop",
-                    hash: "0x9d1a3c5e8b0f7d2a6c9e1b4f3d7a9c8b6e2d1f0a5c8b7e4d3f2a1b4a2e8c6b7f",
-                    manufacturerSignature: {
-                        signer: "Jian Li (Audio Engineer Lead)",
-                        timestamp: "2025-05-20T14:00:00Z",
-                        value: "b8c7d6e5f4a3b2c1d0e9f8a7g6h5i4j3k2l1m0n9o8p7"
-                    },
-                     history: [
-                        { status: "Assembled", date: "2025-05-20", location: "Shenzhen, CN" },
-                        { status: "Quality Checked", date: "2025-05-21", location: "Shenzhen, CN" },
-                        { status: "Shipped", date: "2025-05-25", location: "International Air Freight" }
-                    ],
-                    ingredients: [" neodymium magnets", "Memory Foam Earpads", "Anodized Aluminum", "AuraSound™ Chipset"]
-                },
-                 "PROD-789-QWE": {
-                    name: "Nomad Pro Leather Backpack",
-                    description: "Crafted from full-grain Italian leather, this backpack is the perfect blend of timeless style and modern functionality.",
-                    serial: "SN-K12L3M",
-                    mfgDate: "2025-01-30",
-                    image: "https://images.unsplash.com/photo-1553062407-98eeb6814762?q=80&w=800&auto=format&fit=crop",
-                    hash: "0x2a6c9e1b4f3d7a9c8b6e2d1f0a5c8b7e4d3f2a1b9d1a3c5e8b0f7d2a4a2e8c6b",
-                    manufacturerSignature: {
-                        signer: "Isabella Rossi (Artisan Crafter)",
-                        timestamp: "2025-01-30T09:15:00Z",
-                        value: "e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
-                    },
-                    history: [
-                        { status: "Leather Tanned", date: "2025-01-15", location: "Florence, IT" },
-                        { status: "Hand-Stitched", date: "2025-01-30", location: "Florence, IT" },
-                        { status: "Exported", date: "2025-02-05", location: "Milan, IT" }
-                    ],
-                    ingredients: ["Full-Grain Italian Leather", "YKK Zippers", "Padded Cotton Canvas", "Solid Brass Hardware"]
+            // --- SUPABASE SETUP ---
+            const SUPABASE_URL = 'https://vklcjawpxixkbmqkmfve.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbGNqYXdweGl4a2JtcWttZnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MjE5MDAsImV4cCI6MjA3NDk5NzkwMH0.jTqbxoLAnBjr6vAOOpvCobMrs71HhrEDAAfuWSVFRRA';
+            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            // --- HELPER FUNCTIONS ---
+            function truncateString(str, startChars = 8, endChars = 8) {
+                if (!str || typeof str !== 'string' || str.length <= startChars + endChars) {
+                    return str || 'N/A';
                 }
-            };
+                return str.substring(0, startChars) + '...' + str.substring(str.length - endChars);
+            }
 
+            // --- CORE FUNCTIONS ---
 
-            // --- FUNCTIONS ---
+            // Load all product IDs for the demo table
+            async function loadProductIdsForTable() {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('products') 
+                        .select('supplier, item_id'); 
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        tableBody.innerHTML = ''; // Clear loading message
+                        // Sort data to show a consistent order
+                        data.sort((a, b) => a.item_id.localeCompare(b.item_id));
+                        const uniqueData = [...new Map(data.map(item => [item.item_id, item])).values()];
+                        uniqueData.forEach(product => {
+                            const row = `
+                                <tr class="border-b border-white/20">
+                                    <td class="px-4 py-2 font-medium text-gray-900">${product.supplier}</td>
+                                    <td class="px-4 py-2 font-mono">${product.item_id}</td>
+                                </tr>`;
+                            tableBody.innerHTML += row;
+                        });
+                    } else {
+                         tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No products found.</td></tr>`;
+                    }
+                } catch (err) {
+                    console.error('Error fetching product list:', err);
+                    tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4 text-red-500">Could not load products.</td></tr>`;
+                }
+            }
             
-            // Shows a status message (e.g., loading, error)
             function showStatus(message, isError = false) {
                 initialView.style.display = 'none';
                 resultView.style.display = 'none';
@@ -343,195 +352,149 @@
                 statusMessage.className = isError ? 'text-lg font-medium text-red-600' : 'text-lg font-medium text-blue-600';
             }
             
-            // Finds a product in the mock database
-            function findProduct(id) {
+            // Finds a product in Supabase
+            async function findProduct(id) {
                 showStatus('Verifying product...');
                 
-                // Simulate network delay
-                setTimeout(() => {
-                    const product = productDatabase[id.trim()];
-                    if (product) {
-                        currentProduct = product;
-                        displayProductDetails(product);
-                    } else {
-                        currentProduct = null;
-                        showStatus(`Product with ID "${id}" not found. Please check the ID or try scanning again.`, true);
-                        // Add a button to go back
-                        const backButton = document.createElement('button');
-                        backButton.textContent = 'Try Again';
-                        backButton.className = 'btn-secondary mt-4';
-                        backButton.onclick = resetApp;
-                        statusMessage.appendChild(document.createElement('br'));
-                        statusMessage.appendChild(backButton);
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('products') 
+                        .select('*')
+                        .ilike('item_id', id.trim());
+
+                    if (error) {
+                        throw error;
                     }
-                }, 1000);
+                    
+                    if (!data || data.length === 0) {
+                        throw new Error(`No product found for ID: ${id}`);
+                    }
+
+                    displayProductDetails(data[0]);
+
+                } catch (err) {
+                    console.error('Supabase error:', err.message);
+                    showStatus(`Product with ID "${id}" not found. Please check the ID or try again.`, true);
+                    const backButton = document.createElement('button');
+                    backButton.textContent = 'Try Again';
+                    backButton.className = 'btn-secondary mt-4';
+                    backButton.onclick = resetApp;
+                    statusMessage.appendChild(document.createElement('br'));
+                    statusMessage.appendChild(backButton);
+                }
             }
 
             // Displays the product details on the screen
-            function displayProductDetails(product) {
-                document.getElementById('product-name').textContent = product.name;
-                document.getElementById('product-description').textContent = product.description;
-                document.getElementById('product-serial').textContent = product.serial;
-                document.getElementById('product-mfg-date').textContent = product.mfgDate;
-                document.getElementById('product-image').src = product.image;
-                document.getElementById('product-hash').textContent = product.hash;
+            function displayProductDetails(data) {
+                // --- DATA MAPPING: from CSV columns to UI elements ---
+                document.getElementById('item-id').textContent = data.item_id || 'N/A';
+                document.getElementById('serial-no').textContent = data.serial_no || 'N/A';
+                document.getElementById('supplier').textContent = data.supplier || 'N/A';
+                document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleString();
                 
-                // Populate new fields
-                document.getElementById('sig-signer').textContent = product.manufacturerSignature.signer;
-                document.getElementById('sig-timestamp').textContent = new Date(product.manufacturerSignature.timestamp).toLocaleString();
-                document.getElementById('manufacturer-signature').textContent = product.manufacturerSignature.value;
+                document.getElementById('tx-id').textContent = truncateString(data.tx_id, 6, 6);
+                document.getElementById('customer').textContent = data.customer || 'N/A';
+                document.getElementById('order-status').textContent = data.order_status || 'N/A';
+                document.getElementById('compliance-checks').textContent = data.compliance_checks || 'N/A';
 
-                const historyContainer = document.getElementById('product-history');
-                const ingredientsContainer = document.getElementById('product-ingredients');
+                const contractStatusEl = document.getElementById('contract-status');
+                contractStatusEl.textContent = data.smart_contract_status || 'N/A';
+                contractStatusEl.className = 'status-badge justify-self-start';
+                switch(data.smart_contract_status) {
+                    case 'VERIFIED':
+                        contractStatusEl.classList.add('bg-green-100', 'text-green-800');
+                        break;
+                    case 'REVOKED':
+                        contractStatusEl.classList.add('bg-red-100', 'text-red-800');
+                        break;
+                    case 'CLAIMED':
+                        contractStatusEl.classList.add('bg-yellow-100', 'text-yellow-800');
+                        break;
+                    default:
+                        contractStatusEl.classList.add('bg-gray-100', 'text-gray-800');
+                }
+
+                document.getElementById('product-hash').textContent = truncateString(data.blockchain_tx_hash);
+                document.getElementById('block-number').textContent = data.block_number || 'N/A';
+                document.getElementById('confirmations').textContent = data.confirmations || 'N/A';
                 
-                historyContainer.innerHTML = ''; // Clear previous results
-                ingredientsContainer.innerHTML = ''; // Clear previous results
-
-                // Populate History
-                product.history.forEach((item, index) => {
-                    const historyItem = document.createElement('div');
-                    historyItem.className = 'pl-8 relative fade-in-up';
-                    historyItem.style.animationDelay = `${index * 100}ms`;
-                    historyItem.innerHTML = `
-                        <div class="absolute -left-1.5 top-1 w-4 h-4 bg-blue-500 rounded-full border-4 border-white shadow"></div>
-                        <p class="font-semibold text-gray-800">${item.status}</p>
-                        <p class="text-sm text-gray-500">${item.location}</p>
-                        <p class="text-xs text-gray-400 font-mono">${item.date}</p>
-                    `;
-                    historyContainer.appendChild(historyItem);
-                });
-
-                // Populate Ingredients
-                product.ingredients.forEach(item => {
-                    const ingredientTag = document.createElement('span');
-                    ingredientTag.className = 'bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1.5 rounded-full shadow-sm';
-                    ingredientTag.textContent = item;
-                    ingredientsContainer.appendChild(ingredientTag);
-                });
-
+                // Store full text for copy buttons
+                copyTxBtn.dataset.fullText = data.tx_id || '';
+                copyHashBtn.dataset.fullText = data.blockchain_tx_hash || '';
 
                 initialView.style.display = 'none';
                 statusView.style.display = 'none';
                 resultView.style.display = 'block';
             }
             
-            // Resets the application to its initial state
             function resetApp() {
                 stopQrScanner();
                 initialView.style.display = 'block';
                 statusView.style.display = 'none';
                 resultView.style.display = 'none';
                 productIdInput.value = '';
-                currentProduct = null;
                 qrReaderElement.style.display = 'none';
                 qrReaderElement.classList.remove('scanner-active');
                 scanQrBtn.disabled = false;
                 qrScanResult.innerHTML = '';
             }
 
-            // Starts the QR code scanner
             function startQrScanner() {
                 qrReaderElement.style.display = 'block';
-                scanQrBtn.disabled = true; // Prevent multiple clicks
-                
-                // Initialize the scanner if it hasn't been already
-                if (!html5QrCode) {
-                    html5QrCode = new Html5Qrcode("qr-reader");
-                }
-                
+                scanQrBtn.disabled = true;
+                if (!html5QrCode) { html5QrCode = new Html5Qrcode("qr-reader"); }
                 qrReaderElement.classList.add('scanner-active');
                 qrScanResult.innerHTML = `<span class="text-blue-600">Starting camera...</span>`;
-                
                 const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                
-                const onScanSuccess = (decodedText, decodedResult) => {
+                const onScanSuccess = (decodedText) => {
                     qrScanResult.innerHTML = `<span class="text-green-600">Scan successful!</span>`;
                     stopQrScanner();
-                    productIdInput.value = decodedText; // Populate the input field
+                    productIdInput.value = decodedText;
                     findProduct(decodedText);
                 };
-                
-                const onScanFailure = (error) => {
-                    // This function is called frequently, so we don't log every error.
-                    // qrScanResult.innerHTML = `<span class="text-gray-500">Scanning...</span>`;
-                };
-
-                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
                     .catch(err => {
-                        qrScanResult.innerHTML = `<span class="text-red-600">Camera error: ${err}. Please grant permission.</span>`;
+                        qrScanResult.innerHTML = `<span class="text-red-600">Camera error: ${err}.</span>`;
                         qrReaderElement.classList.remove('scanner-active');
                         scanQrBtn.disabled = false;
                     });
             }
 
-            // Stops the QR code scanner
             function stopQrScanner() {
                 if (html5QrCode && html5QrCode.isScanning) {
-                    html5QrCode.stop().then(() => {
-                        console.log("QR Code scanning stopped.");
-                    }).catch(err => {
-                        console.error("Failed to stop QR scanner.", err);
-                    }).finally(() => {
-                        qrReaderElement.style.display = 'none';
-                        qrReaderElement.classList.remove('scanner-active');
-                        scanQrBtn.disabled = false;
-                    });
+                    html5QrCode.stop().catch(err => {});
                 }
             }
             
-            // --- EVENT LISTENERS ---
-
-            // Verify button click
+            // --- EVENT LISTENERS & INITIALIZATION ---
             verifyBtn.addEventListener('click', () => {
                 const productId = productIdInput.value;
-                if (productId) {
-                    findProduct(productId);
-                } else {
-                    // Simple validation feedback
-                    productIdInput.classList.add('border-red-500', 'ring-red-500');
-                    setTimeout(() => productIdInput.classList.remove('border-red-500', 'ring-red-500'), 2000);
-                }
+                if (productId) { findProduct(productId); }
             });
             
-            // Allow pressing Enter in the input field
             productIdInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    verifyBtn.click();
-                }
+                if (e.key === 'Enter') { verifyBtn.click(); }
             });
 
-            // Scan QR button click
             scanQrBtn.addEventListener('click', () => {
-                if (qrReaderElement.style.display === 'none') {
-                    startQrScanner();
-                } else {
-                    stopQrScanner();
-                }
+                if (qrReaderElement.style.display === 'none') { startQrScanner(); }
+                else { stopQrScanner(); }
             });
 
-            // Reset button click
             resetBtn.addEventListener('click', resetApp);
             
-            // Copy hash button click
             copyHashBtn.addEventListener('click', (e) => {
-                const hashText = document.getElementById('product-hash').textContent;
-                navigator.clipboard.writeText(hashText).then(() => {
-                    e.currentTarget.title = 'Copied!';
-                    setTimeout(() => { e.currentTarget.title = 'Copy to Clipboard'; }, 2000);
-                });
+                navigator.clipboard.writeText(e.currentTarget.dataset.fullText);
+            });
+            
+            copyTxBtn.addEventListener('click', (e) => {
+                navigator.clipboard.writeText(e.currentTarget.dataset.fullText);
             });
 
-            // Copy signature button click
-            copySigBtn.addEventListener('click', (e) => {
-                const sigText = document.getElementById('manufacturer-signature').textContent;
-                 navigator.clipboard.writeText(sigText).then(() => {
-                    e.currentTarget.title = 'Copied!';
-                    setTimeout(() => { e.currentTarget.title = 'Copy to Clipboard'; }, 2000);
-                });
-            });
+            // Load the product list into the table when the app starts
+            loadProductIdsForTable();
         });
     </script>
 </body>
 </html>
-
 
