@@ -172,6 +172,21 @@
                 transform: rotate(360deg);
             }
         }
+
+        @keyframes indeterminate {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .animate-indeterminate {
+            animation: indeterminate 1.5s infinite linear;
+            width: 50%;
+        }
     </style>
 </head>
 
@@ -184,6 +199,18 @@
                     data-lucide="x"></i></button>
             <div id="modal-content" class="text-center"></div>
         </div>
+    </div>
+
+    <!-- GLOBAL LOADER -->
+    <div id="global-loader"
+        class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center hidden transition-opacity duration-300">
+        <div class="relative">
+            <div class="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i data-lucide="shield-check" class="w-6 h-6 text-blue-500 animate-pulse"></i>
+            </div>
+        </div>
+        <p class="mt-4 text-blue-400 font-bold tracking-wider animate-pulse">VERIFYING...</p>
     </div>
 
     <!-- HOME SCREEN -->
@@ -324,7 +351,7 @@
             <!-- Stats -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-[#1e2633] p-4 rounded-2xl border border-slate-800 text-center">
-                    <p class="text-3xl font-bold text-white mb-1">12</p>
+                    <p id="stats-owned" class="text-3xl font-bold text-white mb-1">0</p>
                     <p class="text-xs text-slate-400 uppercase tracking-wider">Products Owned</p>
                 </div>
                 <div class="bg-[#1e2633] p-4 rounded-2xl border border-slate-800 text-center">
@@ -536,8 +563,8 @@
     <!-- LOGIC -->
     <script>
         // --- CONFIGURATION ---
-        const SUPABASE_URL = 'https://vklcjawpxixkbmqkmfve.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbGNqYXdweGl4a2JtcWttZnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MjE5MDAsImV4cCI6MjA3NDk5NzkwMH0.jTqbxoLAnBjr6vAOOpvCobMrs71HhrEDAAfuWSVFRRA';
+        const SUPABASE_URL = 'https://osuwkjjxrcdaacegrvaa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdXdramp4cmNkYWFjZWdydmFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwODEzMDUsImV4cCI6MjA4NjY1NzMwNX0.2DUfrPvaNg3KYv9pT24vdUkbrGBebhzOTvAeLekRxUs';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // --- STATE ---
@@ -578,6 +605,14 @@
             // Refresh specific views
             if (screenId === 'history') renderHistoryFull();
             if (screenId === 'home') renderQuickHistory();
+            if (screenId === 'profile') renderProfileStats();
+        }
+
+        function renderProfileStats() {
+            const verified = JSON.parse(localStorage.getItem('authentichain_verified')) || [];
+            const count = verified.length;
+            const el = document.getElementById('stats-owned');
+            if (el) el.textContent = count;
         }
 
         // --- SCANNER LOGIC ---
@@ -664,74 +699,300 @@
         }
 
         async function handleScanSuccess(decodedText) {
-            // Stop scanner if running
-            if (isScanning) await toggleScanner();
+            const cleanId = decodedText.trim();
 
-            // Show loading
-            document.getElementById('loading-indicator').classList.remove('hidden');
-            document.getElementById('action-btn').disabled = true;
+            // 1. Immediate Feedback: Show Global Loader
+            // This prevents the "frozen" feeling while camera stops
+            const loader = document.getElementById('global-loader');
+            loader.classList.remove('hidden');
+
+            // Small delay to let UI render the loader before heavy ops
+            await new Promise(r => setTimeout(r, 50));
+
+            // Stop scanner
+            if (isScanning) {
+                try {
+                    await toggleScanner();
+                } catch (e) { console.warn("Error stopping scanner:", e); }
+            }
+
+            // 2. Navigate to Result screen with Placeholders (Verifying State)
+            navigate('result');
+            populateWithPlaceholders(cleanId);
+
+            // Hide global loader now that we are on the result screen with its own loading state
+            setTimeout(() => {
+                loader.classList.add('hidden');
+            }, 300); // Short delay for smooth transition
 
             try {
-                // 1. Fetch from Supabase
+                // 3. Fetch from Supabase
+                console.log(`Searching for Product id: ${cleanId}`);
                 const { data, error } = await supabaseClient
                     .from('products')
                     .select('*')
-                    .ilike('item_id', decodedText)
-                    .single();
+                    .eq('Product id', cleanId)
+                    .maybeSingle();
 
-                if (error || !data) {
-                    throw new Error("Product not found");
-                }
+                if (error) throw new Error(error.message);
+                if (!data) throw new Error("Product data is empty");
 
                 currentProduct = data;
 
-                // 2. Add to History
+                // 4. Add to History & Store
                 addToHistory(data);
+                storeVerifiedProduct(data);
 
-                // 3. Populate and Show Details
+                // 5. Show Real Details (Updates the card to "Verified")
                 populateDetails(data);
-
-                // Enable details tab
-                const detailsNav = document.getElementById('nav-details');
-                detailsNav.disabled = false;
-                detailsNav.classList.remove('opacity-50', 'cursor-not-allowed');
-
-                navigate('details');
 
             } catch (err) {
                 console.error(err);
-                showModal('Product Not Found', `We could not find a record for ID: <b>${decodedText}</b><br>Please try again.`, 'error');
+                loader.classList.add('hidden'); // Ensure loader is gone
+
+                // Detailed Error Message
+                let errorMsg = `We could not find a record for ID: <b>${cleanId}</b>`;
+                let errorTitle = 'Product Not Found';
+                let tip = 'Tip: Check if RLS Policies are enabled in Supabase without public access.';
+
+                if (err.message && err.message.includes('JSON object requested')) {
+                    errorMsg += `<br><span class="text-xs text-red-400 mt-2 block">Reason: No matching record found.</span>`;
+                } else if (err.message) {
+                    errorMsg += `<br><span class="text-xs text-red-400 mt-2 block">Error: ${err.message}</span>`;
+                }
+
+                if (err.message && (err.message.includes('fetch') || err.message.includes('network'))) {
+                    errorTitle = 'Connection Error';
+                    errorMsg = 'Please check your internet connection.';
+                    tip = 'Tip: Ensure you are online.';
+                }
+
+                showModal(errorTitle, `${errorMsg}<br><div class="mt-4 text-[10px] text-slate-500 bg-slate-800 p-2 rounded">${tip}</div>`, 'error');
             } finally {
-                document.getElementById('loading-indicator').classList.add('hidden');
-                document.getElementById('action-btn').disabled = false;
+                // document.getElementById('loading-indicator').classList.add('hidden'); // Removed as we use global loader
             }
         }
 
         // --- DATA & UI ---
+        function populateWithPlaceholders(id) {
+            // Set Card to "Verifying" State
+            const card = document.getElementById('result-status-card');
+            card.innerHTML = `
+                <div class="absolute top-0 left-0 w-full h-1 bg-blue-500/30 overflow-hidden">
+                    <div class="h-full bg-blue-500 animate-indeterminate"></div>
+                </div>
+                 <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-400">
+                    <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+                <h2 class="text-xl font-bold text-white mb-1 animate-pulse">Verifying Product...</h2>
+                <p class="text-blue-400 font-medium text-sm">Checking Blockchain Records</p>
+                <div class="mt-4 inline-block px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+                    ID: <span id="detail-id" class="text-white">${id}</span>
+                </div>
+            `;
+
+            // Placeholders for other fields
+            document.getElementById('detail-supplier').innerHTML = '<span class="animate-pulse bg-slate-700 text-transparent rounded">Loading...</span>';
+            document.getElementById('detail-serial').innerHTML = '<span class="animate-pulse bg-slate-700 text-transparent rounded">Loading...</span>';
+            document.getElementById('detail-date').innerHTML = '<span class="animate-pulse bg-slate-700 text-transparent rounded">Loading...</span>';
+            document.getElementById('detail-hash').innerHTML = '<span class="animate-pulse bg-slate-700 text-transparent rounded">Loading...</span>';
+            document.getElementById('detail-block').innerHTML = '<span class="animate-pulse bg-slate-700 text-transparent rounded">...</span>';
+
+            // Clear extra data
+            const oldExtra = document.getElementById('extra-product-data');
+            if (oldExtra) oldExtra.remove();
+        }
+
         function populateDetails(data) {
-            document.getElementById('detail-id').textContent = data.item_id || 'N/A';
-            document.getElementById('detail-supplier').textContent = data.supplier || 'Unknown Supplier';
-            document.getElementById('detail-serial').textContent = data.serial_no || 'N/A';
-            document.getElementById('detail-date').textContent = new Date(data.timestamp).toLocaleDateString() || 'N/A';
-            document.getElementById('detail-hash').textContent = data.blockchain_tx_hash || 'Pending';
-            document.getElementById('detail-block').textContent = data.block_number || '-';
+            // Restore Card to "Authentic" State
+            const card = document.getElementById('result-status-card');
+            card.innerHTML = `
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-green-400 to-blue-500"></div>
+                <div class="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-green-400">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-1">Authentic Product</h2>
+                <p class="text-green-400 font-medium text-sm">Verified on Blockchain</p>
+                <div class="mt-4 inline-block px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+                    ID: <span id="detail-id" class="text-white">${data['Product id'] || 'N/A'}</span>
+                </div>
+            `;
+            lucide.createIcons(); // Re-init icons for the card
+
+            // Map fields based on the provided schema image (using "Exact Name" format)
+            const pId = data['Product id'];
+            const pType = data['Product type'];
+            const pDetail = data['Product detail'];
+            const createdBy = data['Created by'];
+
+            // Suppliers & Logistics
+            const supplier = data['Transferred to supplier'];
+            const transferTs = data['Transfer timestamp'];
+            const transferHash = data['Transfer blockchain hash'];
+
+            const sellBy = data['Sell by'];
+            const sellTs = data['Sell timestamp'];
+            const sellHash = data['Sell blockchain hash'];
+
+            const deliveredTo = data['Delivered to'];
+            const deliverTs = data['Delivery timestamp'];
+            const deliverHash = data['Delivery blockchain hash'];
+
+            document.getElementById('detail-id').textContent = pId || 'N/A';
+            document.getElementById('detail-supplier').textContent = supplier || 'Not Transferred';
+            document.getElementById('detail-serial').textContent = pType || 'N/A';
+
+            // Format timestamps (using Transfer as proxy for Mfg date if needed, or just Created At if available, but mapping to schema)
+            const mfgDate = transferTs ? new Date(transferTs).toLocaleDateString() : 'N/A';
+            document.getElementById('detail-date').textContent = mfgDate;
+
+            // Blockchain Proof - Showing the latest relevant hash
+            let latestHash = deliverHash || sellHash || transferHash || 'Pending';
+            document.getElementById('detail-hash').textContent = latestHash;
+
+            document.getElementById('detail-block').textContent = 'N/A';
 
             const statusEl = document.getElementById('detail-contract-status');
-            statusEl.textContent = data.smart_contract_status || 'UNKNOWN';
+            // If it has a delivery hash, we consider it verified
+            const isVerified = !!deliverHash;
+            statusEl.textContent = isVerified ? 'VERIFIED' : 'IN TRANSIT';
+            statusEl.className = isVerified ? 'font-bold text-sm text-green-400' : 'font-bold text-sm text-yellow-500';
 
-            // Logic for status color
-            if (data.smart_contract_status === 'VERIFIED') statusEl.className = 'font-bold text-sm text-green-400';
-            else statusEl.className = 'font-bold text-sm text-yellow-500';
+            // Add Expanded Data
+            const container = document.querySelector('#screen-result .space-y-4');
+            if (container) {
+                const oldExtra = document.getElementById('extra-product-data');
+                if (oldExtra) oldExtra.remove();
+
+                const extraDiv = document.createElement('div');
+                extraDiv.id = 'extra-product-data';
+                extraDiv.className = 'space-y-6 border-t border-slate-800/50 mt-4 pt-6';
+
+                // Helper to create rows (keep for non-detail fields)
+                const createRow = (label, value) => `
+                    <div class="flex justify-between items-center py-1">
+                        <span class="text-slate-400 text-xs">${label}</span>
+                        <span class="font-medium text-sm text-right text-slate-200">${value || '--'}</span>
+                    </div>`;
+
+                // Parse Product Detail
+                let detailsGrid = '';
+                try {
+                    // It looks like a Python dict string: {'Key': 'Value', ...}
+                    // We attempt validation and parsing
+                    if (pDetail && (pDetail.startsWith('{') || pDetail.startsWith('['))) {
+                        // Replace single quotes with double quotes for valid JSON
+                        // This regex looks for single quotes that wrap keys or values
+                        const jsonString = pDetail.replace(/'/g, '"');
+                        const detailsObj = JSON.parse(jsonString);
+
+                        // Create Grid Items
+                        const gridItems = Object.entries(detailsObj).map(([key, val]) => `
+                            <div class="bg-black/20 p-3 rounded-2xl border border-white/5 flex flex-col justify-center">
+                                <p class="text-[10px] text-slate-500 uppercase font-bold mb-1 tracking-wider">${key}</p>
+                                <p class="text-sm font-semibold text-slate-200 leading-tight">${val}</p>
+                            </div>
+                        `).join('');
+
+                        detailsGrid = `
+                            <div class="mt-2">
+                                <p class="text-[10px] text-slate-500 uppercase mb-3 font-bold tracking-wider flex items-center gap-2">
+                                    <i data-lucide="list" class="w-3 h-3"></i> Specifications
+                                </p>
+                                <div class="grid grid-cols-2 gap-3">
+                                    ${gridItems}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Fallback for simple string
+                        detailsGrid = createRow('Product Detail', pDetail);
+                    }
+                } catch (e) {
+                    console.warn("Failed to parse details:", e);
+                    // Fallback to raw string if parsing fails
+                    detailsGrid = `
+                        <div class="mt-2 bg-black/20 p-3 rounded-2xl border border-white/5">
+                            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1 tracking-wider">Product Detail</p>
+                            <p class="text-xs text-slate-300 break-words">${pDetail || 'N/A'}</p>
+                        </div>`;
+                }
+
+
+                extraDiv.innerHTML = `
+                    ${detailsGrid}
+                    
+                    <div class="grid grid-cols-1 gap-1 py-2">
+                        ${createRow('Created By', createdBy)}
+                        ${createRow('Sell By', sellBy)}
+                        ${createRow('Delivered To', deliveredTo)}
+                    </div>
+
+                    <div class="mt-2 pt-4 border-t border-slate-800/50">
+                        <p class="text-[10px] text-slate-500 uppercase mb-4 font-bold tracking-wider flex items-center gap-2">
+                             <i data-lucide="clock" class="w-3 h-3"></i> Lifecycle Timeline
+                        </p>
+                        <div class="relative pl-4 ml-2 border-l border-slate-800 space-y-6">
+                            <!-- Transfer -->
+                            <div class="relative">
+                                <span class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full ${transferTs ? 'bg-blue-500 ring-4 ring-blue-500/10' : 'bg-slate-800'}"></span>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-slate-200">Transferred to Supplier</span>
+                                    <span class="text-[10px] text-slate-500 mt-0.5">${transferTs ? new Date(transferTs).toLocaleString() : 'Pending'}</span>
+                                    ${transferHash ? `<span class="text-[9px] font-mono text-slate-600 mt-1 truncate max-w-[200px]">${transferHash}</span>` : ''}
+                                </div>
+                            </div>
+                            
+                            <!-- Sold -->
+                             <div class="relative">
+                                <span class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full ${sellTs ? 'bg-blue-500 ring-4 ring-blue-500/10' : 'bg-slate-800'}"></span>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold text-slate-200">Sold to Consumer</span>
+                                    <span class="text-[10px] text-slate-500 mt-0.5">${sellTs ? new Date(sellTs).toLocaleString() : 'Pending'}</span>
+                                </div>
+                            </div>
+
+                            <!-- Delivered -->
+                             <div class="relative">
+                                <span class="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full ${deliverTs ? 'bg-green-500 ring-4 ring-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-slate-800'}"></span>
+                                <div class="flex flex-col">
+                                    <span class="text-xs font-bold ${deliverTs ? 'text-green-400' : 'text-slate-200'}">Delivered</span>
+                                    <span class="text-[10px] text-slate-500 mt-0.5">${deliverTs ? new Date(deliverTs).toLocaleString() : 'Pending'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(extraDiv);
+
+                // Re-init icons for new content
+                lucide.createIcons();
+            }
+        }
+
+        function storeVerifiedProduct(item) {
+            let verified = JSON.parse(localStorage.getItem('authentichain_verified')) || [];
+            // Check if already exists
+            const pId = item['Product id'];
+            if (!verified.find(p => p.product_id === pId)) {
+                verified.push({
+                    product_id: pId,
+                    product_type: item['Product type'],
+                    verified_at: new Date().toISOString()
+                });
+                localStorage.setItem('authentichain_verified', JSON.stringify(verified));
+            }
         }
 
         function addToHistory(item) {
+            const pId = item['Product id'];
             // Avoid duplicates at top
-            scanHistory = scanHistory.filter(h => h.item_id !== item.item_id);
+            scanHistory = scanHistory.filter(h => h.item_id !== pId);
             scanHistory.unshift({
-                item_id: item.item_id,
-                supplier: item.supplier,
+                item_id: pId,
+                supplier: item['Product type'], // Using Type as quick view info
                 timestamp: new Date().toISOString(),
-                status: item.smart_contract_status
+                status: 'VERIFIED'
             });
             // Limit to 20
             if (scanHistory.length > 20) scanHistory.pop();
@@ -751,7 +1012,7 @@
                 <div onclick="handleRevisit('${item.item_id}')" class="bg-[#1e2633] p-4 rounded-2xl border border-slate-800 active:scale-95 transition-transform cursor-pointer">
                     <p class="text-[10px] text-gray-500 uppercase">Product ID</p>
                     <p class="text-sm font-bold text-blue-400 truncate">${item.item_id}</p>
-                    <p class="text-[10px] text-gray-500 mt-2 uppercase">Supplier</p>
+                    <p class="text-[10px] text-gray-500 mt-2 uppercase">Type</p>
                     <p class="text-xs text-slate-300 truncate">${item.supplier}</p>
                 </div>
             `).join('');
