@@ -1,498 +1,728 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Verification</title>
-    <!-- FIX: Added base tag to help resolve relative paths for manifest and service worker -->
-    <base href=".">
-    <!-- Link to the Web App Manifest (Updated Path) -->
-    <link rel="manifest" href="./manifest.json">
-    <!-- Theme color for the browser UI -->
-    <meta name="theme-color" content="#1e293b"> <!-- Dark Slate -->
-    <!-- Tailwind CSS for styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Product Authenticator UI</title>
+
+    <!-- PWA & SEO -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Blockchain-based Product Authentication System">
+
+    <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- QR Code Scanner Library -->
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <!-- Supabase Client Library -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <style>
+        /* Base Styles */
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a; /* Slate 900 */
-        }
-        
-        .card-dark {
-            background-color: #1e293b; /* Slate 800 */
-            border: 1px solid #334155; /* Slate 700 */
-            border-radius: 1.5rem; /* 24px */
-        }
-        
-        .header-dark {
-             background: rgba(30, 41, 59, 0.8); /* Slate 800 with transparency */
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid #334155; /* Slate 700 */
+            background-color: #0f172a;
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- Animation Classes --- */
-        .swoosh-in {
-            animation: swooshIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
-        }
-        .fade-in-up {
-            animation: fadeInUp 0.5s ease-out both;
-        }
-        
-        @keyframes swooshIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.95) translateY(20px);
-            }
-            100% {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+        /* Screen Management */
+        .screen {
+            display: none;
+            min-height: 100vh;
+            width: 100%;
+            max-width: 450px;
+            margin: 0 auto;
+            background: #121821;
+            padding-bottom: 90px;
+            /* Space for nav */
+            position: relative;
         }
 
-        @keyframes fadeInUp {
+        .active-screen {
+            display: block;
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
         }
-        
-        #qr-reader video {
-            border-radius: 1rem;
-            border: 2px dashed #475569; /* Slate 600 */
+
+        /* Navigation */
+        .nav-icon {
+            color: #64748b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            stroke-width: 2.5px;
         }
-        
-        .btn-primary {
-            @apply bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-300 transform hover:-translate-y-1;
+
+        .nav-active .nav-icon {
+            color: #3b82f6;
+            transform: translateY(-4px);
+            filter: drop-shadow(0 4px 6px rgba(59, 130, 246, 0.3));
         }
-        .btn-secondary {
-            @apply bg-slate-700 text-slate-200 font-bold py-3 px-6 rounded-xl border border-slate-600 hover:bg-slate-600 transition-all duration-300 transform hover:-translate-y-0.5;
+
+        .nav-active span {
+            color: #3b82f6;
+            font-weight: 700;
         }
-        .status-badge {
-             @apply text-xs font-semibold inline-block py-1 px-2.5 uppercase rounded-full;
+
+        /* Scanner Customization */
+        #reader {
+            border: none !important;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        #reader video {
+            object-fit: cover;
+            border-radius: 16px;
+        }
+
+        /* Hide HTML5-QRCode default UI elements we don't want */
+        #reader__dashboard_section_csr span,
+        #reader__dashboard_section_swaplink {
+            display: none !important;
+        }
+
+        #reader__dashboard_section_csr button {
+            display: none;
+            /* We use our own buttons */
+        }
+
+        /* Glassmorphism & Cards */
+        .glass-panel {
+            background: rgba(30, 38, 51, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-active {
+            display: flex;
+            animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Utilities */
+        .prod-img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 12px;
+            background-color: #1e293b;
+        }
+
+        .loader {
+            border: 3px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid #3b82f6;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
-<body class="antialiased text-slate-300">
 
-    <!-- Header -->
-    <header class="text-center p-4 header-dark flex-shrink-0 flex items-center justify-center space-x-2 w-full shadow-lg sticky top-0 z-10">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-500"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        <h1 class="text-lg md:text-xl font-bold text-white">Product Authenticator</h1>
-    </header>
+<body class="bg-black text-slate-200">
 
-    <!-- Main Content Area -->
-    <main id="app" class="w-full max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-        <!-- Initial View: Input and Scan options -->
-        <div id="initial-view" class="card-dark p-6 md:p-8 transition-all swoosh-in">
-            <!-- Manual ID Input -->
-            <div class="mb-4">
-                <label for="productId" class="block text-sm font-medium text-slate-400 mb-2">Enter Unique Item ID</label>
-                <div class="flex space-x-3">
-                    <input type="text" id="productId" class="flex-grow w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-inner placeholder-slate-500 text-white" placeholder="e.g., PROD-D410">
-                    <button id="verify-btn" class="btn-primary whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block mr-1"><path d="M21.2 15.2c.2-1.3.2-2.7 0-4l2-1.5-2-3.5-2 1.5c-.8-.6-1.7-1.1-2.7-1.3L14 4h-4L9.8 6.3c-1 .3-1.9-.7-2.7 1.3l-2-1.5-2 3.5 2 1.5c-.2 1.3-.2 2.7 0 4l-2 1.5 2 3.5 2-1.5c.8.6 1.7 1.1 2.7 1.3L10 20h4l.2-2.3c1-.3 1.9-.7 2.7-1.3l2 1.5 2-3.5-2-1.5z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        Verify
+    <!-- MODAL -->
+    <div id="modal" class="modal-overlay">
+        <div class="bg-[#1e2633] w-full max-w-sm rounded-[32px] p-8 border border-gray-700 shadow-2xl relative">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-gray-500 hover:text-white transition"><i
+                    data-lucide="x"></i></button>
+            <div id="modal-content" class="text-center"></div>
+        </div>
+    </div>
+
+    <!-- HOME SCREEN -->
+    <div id="screen-home" class="screen active-screen">
+        <header class="p-6 flex items-center gap-3 pt-8">
+            <div class="p-2 bg-blue-500/10 rounded-xl">
+                <i data-lucide="shield-check" class="text-blue-500 w-6 h-6"></i>
+            </div>
+            <h1 class="text-xl font-bold tracking-tight">AuthentiChain</h1>
+        </header>
+
+        <div class="px-6 mt-2 relative z-10">
+            <!-- Scanner Card -->
+            <div class="glass-panel rounded-[32px] p-1 shadow-2xl overflow-hidden relative group">
+                <!-- Camera Viewfinder / Placeholder -->
+                <div class="relative bg-black rounded-[28px] overflow-hidden aspect-square">
+                    <div id="reader" class="w-full h-full"></div>
+
+                    <!-- Placeholder State -->
+                    <div id="camera-placeholder"
+                        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-300">
+                        <div
+                            class="w-48 h-48 border-2 border-blue-500/30 rounded-3xl flex items-center justify-center relative">
+                            <div
+                                class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-blue-500 rounded-tl-xl">
+                            </div>
+                            <div
+                                class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-blue-500 rounded-tr-xl">
+                            </div>
+                            <div
+                                class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-blue-500 rounded-bl-xl">
+                            </div>
+                            <div
+                                class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-blue-500 rounded-br-xl">
+                            </div>
+                            <i data-lucide="scan-line" class="w-12 h-12 text-blue-500 opacity-50 animate-pulse"></i>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-6 font-medium">Camera is offline</p>
+                    </div>
+
+                    <!-- Scan Overlay (Only visible when scanning) -->
+                    <div id="scan-overlay" class="absolute inset-0 border-[40px] border-black/50 z-10 hidden"></div>
+                </div>
+
+                <!-- Controls -->
+                <div class="p-5">
+                    <div id="manual-input-area" class="hidden mb-4">
+                        <input type="text" id="manual-id" placeholder="Enter Product ID (e.g. PROD-123)"
+                            class="w-full bg-[#0f172a] border border-slate-600 rounded-xl p-4 text-white placeholder-slate-500 outline-none focus:border-blue-500 transition-colors font-mono">
+                    </div>
+
+                    <button id="action-btn" onclick="toggleScanner()"
+                        class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="camera" class="w-5 h-5"></i> <span>START SCANNER</span>
                     </button>
+
+                    <button id="toggle-mode-btn" onclick="toggleInputMode()"
+                        class="w-full text-slate-400 text-sm font-semibold py-3 mt-1 hover:text-white transition-colors">
+                        Enter Code Manually
+                    </button>
+
+                    <div id="loading-indicator" class="hidden flex justify-center mt-2">
+                        <div class="loader"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center text-slate-500 my-6">
-                <div class="flex-grow border-t border-slate-700"></div>
-                <span class="flex-shrink mx-4 text-xs font-semibold">OR</span>
-                <div class="flex-grow border-t border-slate-700"></div>
-            </div>
+            <!-- Recent Scans - Quick View -->
+            <div class="mt-8 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">Recently Added</h3>
+                    <button onclick="navigate('history')" class="text-blue-400 text-xs font-semibold">View All</button>
+                </div>
 
-            <!-- QR Scanner Section -->
-            <div id="scanner-section">
-                <button id="scan-qr-btn" class="w-full btn-secondary flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><rect x="7" y="7" width="10" height="10" rx="1"></rect></svg>
-                    Scan QR Code
-                </button>
-                <div id="qr-reader" class="mt-4 w-full mx-auto" style="display: none;"></div>
-                <div id="qr-scan-result" class="text-center mt-2"></div>
-            </div>
-            
-            <!-- Product ID Table -->
-            <div id="product-id-table-container" class="mt-8 pt-6 border-t border-slate-700">
-                 <h3 class="text-sm font-semibold text-slate-400 mb-3 text-center">Available Products</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-slate-400">
-                        <thead class="text-xs text-slate-300 uppercase bg-slate-700/50">
-                            <tr>
-                                <th scope="col" class="px-4 py-2 rounded-l-lg">Supplier</th>
-                                <th scope="col" class="px-4 py-2 rounded-r-lg">Item ID</th>
-                            </tr>
-                        </thead>
-                        <tbody id="product-id-table-body">
-                             <tr class="border-b border-slate-700"><td colspan="2" class="text-center p-4">Loading products...</td></tr>
-                        </tbody>
-                    </table>
+                <div id="quick-history-list" class="grid grid-cols-2 gap-4">
+                    <!-- Populated by JS -->
+                    <div
+                        class="col-span-2 text-center py-8 text-slate-600 text-sm italic border border-dashed border-slate-700 rounded-2xl">
+                        No recent scans
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Status/Error View -->
-        <div id="status-view" class="card-dark text-center p-8" style="display: none;">
-            <p id="status-message" class="text-lg font-medium"></p>
+    <!-- HISTORY SCREEN -->
+    <div id="screen-history" class="screen">
+        <header class="p-6 pt-8 bg-[#121821]/95 sticky top-0 z-20 backdrop-blur-md border-b border-slate-800/50">
+            <h1 class="text-2xl font-bold">Scan History</h1>
+            <p class="text-slate-400 text-sm">Your past verifications</p>
+        </header>
+
+        <div id="history-list" class="px-6 py-6 space-y-4 overflow-y-auto pb-4">
+            <!-- Populated by JS -->
         </div>
-        
-        <!-- Result View: Product Details -->
-        <div id="result-view" class="space-y-6" style="display: none;">
-             <!-- Digital Certificate Card -->
-            <div class="card-dark border-2 border-blue-500/50 p-6 relative overflow-hidden fade-in-up" style="animation-delay: 100ms;">
-                <div class="flex flex-col text-center sm:flex-row sm:text-left items-center mb-4">
-                    <svg class="w-12 h-12 text-green-400 mb-3 sm:mb-0 sm:mr-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                    <div>
-                        <h3 class="text-xl font-bold text-white">Digital Authentication Certificate</h3>
-                        <p class="text-green-400 font-semibold">Product Verified & Authentic</p>
-                    </div>
+
+        <div id="empty-history" class="hidden text-center py-20 px-6">
+            <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i data-lucide="history" class="text-slate-500 w-8 h-8"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-2">No History Yet</h3>
+            <p class="text-slate-500 text-sm">Products you scan will appear here for quick access.</p>
+            <button onclick="navigate('home')"
+                class="mt-6 bg-slate-800 text-white px-6 py-2 rounded-full text-sm font-semibold hover:bg-slate-700">Scan
+                Now</button>
+        </div>
+    </div>
+
+    <!-- DETAILS SCREEN (USER) -->
+    <div id="screen-details" class="screen">
+        <header
+            class="p-6 pt-8 flex items-center gap-4 sticky top-0 bg-[#121821]/95 backdrop-blur-md z-20 border-b border-slate-800/50">
+            <button onclick="navigate('home')"
+                class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <h1 class="text-xl font-bold">Product Result</h1>
+        </header>
+
+        <div class="px-6 py-6 space-y-6">
+            <!-- Status Card -->
+            <div id="result-status-card"
+                class="bg-[#1e2633] p-6 rounded-[32px] border border-blue-500/30 shadow-lg shadow-blue-500/10 text-center relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-green-400 to-blue-500">
                 </div>
-                <p class="text-sm text-slate-400 text-center sm:text-left">This certifies that the product record has been authenticated against the blockchain transaction log.</p>
+
+                <div
+                    class="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-green-400">
+                    <i data-lucide="shield-check" class="w-8 h-8"></i>
+                </div>
+
+                <h2 class="text-2xl font-bold text-white mb-1">Authentic Product</h2>
+                <p class="text-green-400 font-medium text-sm">Verified on Blockchain</p>
+                <div
+                    class="mt-4 inline-block px-4 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-mono text-slate-300">
+                    ID: <span id="detail-id" class="text-white">...</span>
+                </div>
             </div>
 
-            <!-- Core Product Details -->
-            <div class="card-dark p-6 fade-in-up" style="animation-delay: 200ms;">
-                <div class="flex items-center mb-4 border-b border-slate-700 pb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-500 mr-3"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>
-                    <h3 class="text-lg font-semibold text-white">Core Product Details</h3>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700">
-                        <span class="font-semibold text-slate-400 block">Item ID</span>
-                        <span id="item-id" class="font-mono text-base text-white"></span>
-                    </div>
-                    <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700">
-                        <span class="font-semibold text-slate-400 block">Serial Number</span>
-                        <span id="serial-no" class="font-mono"></span>
-                    </div>
-                     <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700 col-span-1 md:col-span-2">
-                        <span class="font-semibold text-slate-400 block">Supplier</span>
-                        <span id="supplier" class="text-base text-white"></span>
-                    </div>
-                    <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700 col-span-1 md:col-span-2">
-                        <span class="font-semibold text-slate-400 block">Timestamp</span>
-                        <span id="timestamp"></span>
-                    </div>
-                </div>
-            </div>
+            <!-- Product Info -->
+            <div class="bg-[#1e2633] p-6 rounded-[32px] border border-slate-800/80">
+                <h3 class="text-slate-500 text-xs font-bold uppercase mb-4 tracking-wider flex items-center gap-2">
+                    <i data-lucide="package" class="w-3 h-3"></i> Product Details
+                </h3>
 
-            <!-- Transaction and Compliance Details Card -->
-            <div class="card-dark p-6 fade-in-up" style="animation-delay: 300ms;">
-                 <div class="flex items-center mb-4 border-b border-slate-700 pb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-500 mr-3"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-                    <h3 class="text-lg font-semibold text-white">Transaction & Compliance</h3>
-                </div>
-                <div class="space-y-4 text-sm">
-                    <div class="flex flex-col sm:flex-row justify-between">
-                        <span class="font-semibold text-slate-400 mb-1 sm:mb-0">Transaction ID</span>
-                        <div class="flex items-center">
-                            <span id="tx-id" class="font-mono text-xs text-slate-300 mr-2 truncate"></span>
-                            <button id="copy-tx-btn" class="p-1 rounded-md hover:bg-slate-700 transition" title="Copy Transaction ID">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                     <div class="flex flex-col sm:flex-row justify-between">
-                        <span class="font-semibold text-slate-400 mb-1 sm:mb-0">Customer</span>
-                        <span id="customer"></span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row justify-between">
-                        <span class="font-semibold text-slate-400 mb-1 sm:mb-0">Order Status</span>
-                        <span id="order-status"></span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row justify-between">
-                        <span class="font-semibold text-slate-400 mb-1 sm:mb-0">Compliance</span>
-                        <span id="compliance-checks" class="text-xs font-semibold text-green-400"></span>
-                    </div>
-                    <div class="flex flex-col sm:flex-row justify-between">
-                        <span class="font-semibold text-slate-400 mb-1 sm:mb-0">Contract Status</span>
-                        <span id="contract-status" class="status-badge"></span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Blockchain Hash Card -->
-            <div class="card-dark p-6 fade-in-up" style="animation-delay: 400ms;">
-                <div class="flex items-center mb-4 border-b border-slate-700 pb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-blue-500 mr-3"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>
-                    <h3 class="text-lg font-semibold text-white">Blockchain Verification</h3>
-                </div>
                 <div class="space-y-4">
+                    <div class="flex justify-between items-center py-2 border-b border-slate-800/50">
+                        <span class="text-slate-400 text-sm">Supplier</span>
+                        <span id="detail-supplier" class="font-semibold text-right max-w-[60%] truncate">...</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2 border-b border-slate-800/50">
+                        <span class="text-slate-400 text-sm">Serial No.</span>
+                        <span id="detail-serial" class="font-mono text-sm text-right">...</span>
+                    </div>
+                    <div class="flex justify-between items-center py-2">
+                        <span class="text-slate-400 text-sm">Manufactured</span>
+                        <span id="detail-date" class="font-medium text-right">...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blockchain Info -->
+            <div class="bg-[#1e2633] p-6 rounded-[32px] border border-slate-800/80">
+                <h3 class="text-slate-500 text-xs font-bold uppercase mb-4 tracking-wider flex items-center gap-2">
+                    <i data-lucide="blocks" class="w-3 h-3"></i> Blockchain Proof
+                </h3>
+
+                <div class="space-y-3">
                     <div>
-                        <p class="text-sm text-slate-400 mb-1">Transaction Hash</p>
-                        <div class="flex items-center bg-slate-700/50 p-2 rounded-lg border border-slate-700">
-                            <pre id="product-hash" class="text-xs text-slate-300 font-mono break-all flex-grow truncate"></pre>
-                            <button id="copy-hash-btn" class="ml-4 p-2 rounded-md hover:bg-slate-600 transition flex-shrink-0" title="Copy Hash">
-                               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                            </button>
+                        <p class="text-[10px] text-slate-500 uppercase mb-1">Transaction Hash</p>
+                        <div
+                            class="flex items-center gap-2 bg-black/40 p-2.5 rounded-xl border border-dashed border-slate-700">
+                            <i data-lucide="hash" class="w-3 h-3 text-slate-500 flex-shrink-0"></i>
+                            <code id="detail-hash"
+                                class="text-[10px] text-blue-300 font-mono break-all line-clamp-2">...</code>
                         </div>
                     </div>
-                     <div class="grid grid-cols-2 gap-4 text-sm pt-2">
-                        <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700">
-                            <span class="font-semibold text-slate-400 block">Block Number</span>
-                            <span id="block-number" class="font-mono"></span>
+                    <div class="grid grid-cols-2 gap-3 mt-2">
+                        <div class="bg-black/20 p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 uppercase">Block</p>
+                            <p id="detail-block" class="font-mono text-sm">...</p>
                         </div>
-                         <div class="bg-slate-700/50 p-3 rounded-xl border border-slate-700">
-                            <span class="font-semibold text-slate-400 block">Confirmations</span>
-                            <span id="confirmations" class="font-mono"></span>
+                        <div class="bg-black/20 p-3 rounded-xl">
+                            <p class="text-[10px] text-slate-500 uppercase">Contract</p>
+                            <p id="detail-contract-status" class="font-bold text-sm text-green-400">...</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="text-center pt-4 fade-in-up" style="animation-delay: 500ms;">
-                 <button id="reset-btn" class="btn-secondary">Scan Another Product</button>
+            <!-- Actions -->
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="showConfirmation()"
+                    class="bg-green-600 hover:bg-green-500 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-900/20 transition-all">
+                    <i data-lucide="check" class="w-4 h-4"></i> CONFIRM
+                </button>
+                <button onclick="showReport()"
+                    class="bg-slate-800 border border-slate-700 text-slate-300 hover:text-white py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="flag" class="w-4 h-4"></i> REPORT
+                </button>
             </div>
-        </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="text-center p-4 text-xs text-slate-500 header-dark w-full">
-        <p>&copy; 2025 AuthentiChain Inc. All rights reserved.</p>
-    </footer>
-    
+            <div class="h-6"></div> <!-- Spacer -->
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav
+        class="fixed bottom-0 left-0 right-0 max-w-[450px] mx-auto bg-[#121821]/90 backdrop-blur-2xl border-t border-gray-800 flex justify-around p-2 pb-6 z-50 shadow-2xl safe-area-bottom">
+        <button onclick="navigate('home')" id="nav-home"
+            class="flex flex-col items-center gap-1 nav-active w-16 p-2 rounded-2xl">
+            <i data-lucide="scan-line" class="nav-icon w-6 h-6"></i>
+            <span class="text-[10px]">Verify</span>
+        </button>
+        <button onclick="navigate('history')" id="nav-history"
+            class="flex flex-col items-center gap-1 w-16 p-2 rounded-2xl">
+            <i data-lucide="history" class="nav-icon w-6 h-6"></i>
+            <span class="text-[10px]">History</span>
+        </button>
+        <!-- The user tab is usually for profile, but let's keep it as is from request -->
+        <button onclick="navigate('details')" id="nav-details"
+            class="flex flex-col items-center gap-1 w-16 p-2 rounded-2xl opacity-50 cursor-not-allowed" disabled>
+            <i data-lucide="file-text" class="nav-icon w-6 h-6"></i>
+            <span class="text-[10px]">Result</span>
+        </button>
+    </nav>
+
+    <!-- LOGIC -->
     <script>
-        // Script to register the service worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                }, err => {
-                    console.log('ServiceWorker registration failed: ', err);
-                });
+        // --- CONFIGURATION ---
+        const SUPABASE_URL = 'https://vklcjawpxixkbmqkmfve.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbGNqYXdweGl4a2JtcWttZnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MjE5MDAsImV4cCI6MjA3NDk5NzkwMH0.jTqbxoLAnBjr6vAOOpvCobMrs71HhrEDAAfuWSVFRRA';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- STATE ---
+        let html5QrCode = null;
+        let isScanning = false;
+        let isManualMode = false;
+        let scanHistory = JSON.parse(localStorage.getItem('authentichain_history')) || [];
+        let currentProduct = null;
+
+        // --- ICONS ---
+        lucide.createIcons();
+
+        // --- NAVIGATION ---
+        function navigate(screenId) {
+            // Stop scanner if leaving home
+            if (screenId !== 'home' && isScanning) {
+                toggleScanner();
+            }
+
+            // UI Switching
+            document.querySelectorAll('.screen').forEach(s => {
+                s.classList.remove('active-screen');
+                s.style.display = 'none'; // Ensure display none is applied
             });
+            const target = document.getElementById('screen-' + screenId);
+            target.style.display = 'block';
+            setTimeout(() => target.classList.add('active-screen'), 10);
+
+            // Nav Styling
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('nav-active'));
+            // If navigating to 'details', we don't necessarily have a nav button for it active if it's dynamic, 
+            // but in this 3-tab request, 'user/details' is a main tab.
+            // Let's enable the details nav button only when we have data.
+            const navBtn = document.getElementById('nav-' + screenId);
+            if (navBtn) navBtn.classList.add('nav-active');
+
+            // Refresh specific views
+            if (screenId === 'history') renderHistoryFull();
+            if (screenId === 'home') renderQuickHistory();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM ELEMENTS ---
-            const initialView = document.getElementById('initial-view');
-            const statusView = document.getElementById('status-view');
-            const statusMessage = document.getElementById('status-message');
-            const resultView = document.getElementById('result-view');
-            
-            const productIdInput = document.getElementById('productId');
-            const verifyBtn = document.getElementById('verify-btn');
-            const scanQrBtn = document.getElementById('scan-qr-btn');
-            const resetBtn = document.getElementById('reset-btn');
-            const copyHashBtn = document.getElementById('copy-hash-btn');
-            const copyTxBtn = document.getElementById('copy-tx-btn');
-            const tableBody = document.getElementById('product-id-table-body');
+        // --- SCANNER LOGIC ---
+        function toggleInputMode() {
+            isManualMode = !isManualMode;
+            const reader = document.getElementById('reader').parentElement;
+            const placeholder = document.getElementById('camera-placeholder');
+            const manual = document.getElementById('manual-input-area');
+            const actionBtn = document.getElementById('action-btn');
+            const toggleBtn = document.getElementById('toggle-mode-btn');
 
-            const qrReaderElement = document.getElementById('qr-reader');
-            const qrScanResult = document.getElementById('qr-scan-result');
-            
-            let html5QrCode;
-
-            // --- SUPABASE SETUP ---
-            const SUPABASE_URL = 'https://vklcjawpxixkbmqkmfve.supabase.co';
-            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZrbGNqYXdweGl4a2JtcWttZnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MjE5MDAsImV4cCI6MjA3NDk5NzkwMH0.jTqbxoLAnBjr6vAOOpvCobMrs71HhrEDAAfuWSVFRRA';
-            const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            // --- HELPER FUNCTIONS ---
-            function truncateString(str, startChars = 8, endChars = 8) {
-                if (!str || typeof str !== 'string' || str.length <= startChars + endChars) {
-                    return str || 'N/A';
-                }
-                return str.substring(0, startChars) + '...' + str.substring(str.length - endChars);
+            if (isManualMode) {
+                if (isScanning) toggleScanner(); // stop camera
+                reader.classList.add('hidden');
+                manual.classList.remove('hidden');
+                actionBtn.innerHTML = '<i data-lucide="search" class="w-5 h-5"></i> <span>VERIFY ID</span>';
+                actionBtn.onclick = handleManualVerify;
+                toggleBtn.innerText = "Switch to Camera Scanner";
+            } else {
+                reader.classList.remove('hidden');
+                manual.classList.add('hidden');
+                actionBtn.innerHTML = '<i data-lucide="camera" class="w-5 h-5"></i> <span>START SCANNER</span>';
+                actionBtn.onclick = toggleScanner;
+                toggleBtn.innerText = "Enter Code Manually";
             }
+            lucide.createIcons();
+        }
 
-            // --- CORE FUNCTIONS ---
+        async function toggleScanner() {
+            const btn = document.getElementById('action-btn');
+            const placeholder = document.getElementById('camera-placeholder');
 
-            // Load all product IDs for the demo table
-            async function loadProductIdsForTable() {
+            if (isScanning) {
+                // STOP SCANNING
                 try {
-                    const { data, error } = await supabaseClient
-                        .from('products') 
-                        .select('supplier, item_id'); 
-
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                        tableBody.innerHTML = ''; // Clear loading message
-                        // Sort data to show a consistent order
-                        data.sort((a, b) => a.item_id.localeCompare(b.item_id));
-                        const uniqueData = [...new Map(data.map(item => [item.item_id, item])).values()];
-                        uniqueData.forEach(product => {
-                            const row = `
-                                <tr class="border-b border-slate-700">
-                                    <td class="px-4 py-2 font-medium text-slate-200">${product.supplier}</td>
-                                    <td class="px-4 py-2 font-mono">${product.item_id}</td>
-                                </tr>`;
-                            tableBody.innerHTML += row;
-                        });
-                    } else {
-                         tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4">No products found.</td></tr>`;
+                    if (html5QrCode) {
+                        await html5QrCode.stop();
+                        html5QrCode.clear();
                     }
-                } catch (err) {
-                    console.error('Error fetching product list:', err);
-                    tableBody.innerHTML = `<tr><td colspan="2" class="text-center p-4 text-red-500">Could not load products.</td></tr>`;
-                }
-            }
-            
-            function showStatus(message, isError = false) {
-                initialView.style.display = 'none';
-                resultView.style.display = 'none';
-                statusView.style.display = 'block';
-                statusMessage.textContent = message;
-                statusMessage.className = isError ? 'text-lg font-medium text-red-500' : 'text-lg font-medium text-blue-400';
-            }
-            
-            // Finds a product in Supabase
-            async function findProduct(id) {
-                showStatus('Verifying product...');
-                
-                try {
-                    const { data, error } = await supabaseClient
-                        .from('products') 
-                        .select('*')
-                        .ilike('item_id', id.trim());
+                } catch (e) { console.error(e); }
+                isScanning = false;
+                placeholder.classList.remove('opacity-0');
+                btn.classList.replace('bg-red-600', 'bg-blue-600');
+                btn.classList.replace('hover:bg-red-500', 'hover:bg-blue-500');
+                btn.innerHTML = '<i data-lucide="camera" class="w-5 h-5"></i> <span>START SCANNER</span>';
+            } else {
+                // START SCANNING
+                isScanning = true;
+                placeholder.classList.add('opacity-0');
+                btn.classList.replace('bg-blue-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-blue-500', 'hover:bg-red-500');
+                btn.innerHTML = '<i data-lucide="x" class="w-5 h-5"></i> <span>STOP SCANNER</span>';
 
-                    if (error) {
-                        throw error;
-                    }
-                    
-                    if (!data || data.length === 0) {
-                        throw new Error(`No product found for ID: ${id}`);
-                    }
-
-                    displayProductDetails(data[0]);
-
-                } catch (err) {
-                    console.error('Supabase error:', err.message);
-                    showStatus(`Product with ID "${id}" not found. Please check the ID or try again.`, true);
-                    const backButton = document.createElement('button');
-                    backButton.textContent = 'Try Again';
-                    backButton.className = 'btn-secondary mt-4';
-                    backButton.onclick = resetApp;
-                    statusMessage.appendChild(document.createElement('br'));
-                    statusMessage.appendChild(backButton);
-                }
-            }
-
-            // Displays the product details on the screen
-            function displayProductDetails(data) {
-                // --- DATA MAPPING: from CSV columns to UI elements ---
-                document.getElementById('item-id').textContent = data.item_id || 'N/A';
-                document.getElementById('serial-no').textContent = data.serial_no || 'N/A';
-                document.getElementById('supplier').textContent = data.supplier || 'N/A';
-                document.getElementById('timestamp').textContent = new Date(data.timestamp).toLocaleString();
-                
-                document.getElementById('tx-id').textContent = truncateString(data.tx_id, 6, 6);
-                document.getElementById('customer').textContent = data.customer || 'N/A';
-                document.getElementById('order-status').textContent = data.order_status || 'N/A';
-                document.getElementById('compliance-checks').textContent = data.compliance_checks || 'N/A';
-
-                const contractStatusEl = document.getElementById('contract-status');
-                contractStatusEl.textContent = data.smart_contract_status || 'N/A';
-                contractStatusEl.className = 'status-badge justify-self-start';
-                switch(data.smart_contract_status) {
-                    case 'VERIFIED':
-                        contractStatusEl.classList.add('bg-green-500/20', 'text-green-300');
-                        break;
-                    case 'REVOKED':
-                        contractStatusEl.classList.add('bg-red-500/20', 'text-red-300');
-                        break;
-                    case 'CLAIMED':
-                        contractStatusEl.classList.add('bg-yellow-500/20', 'text-yellow-300');
-                        break;
-                    default:
-                        contractStatusEl.classList.add('bg-slate-600', 'text-slate-200');
-                }
-
-                document.getElementById('product-hash').textContent = truncateString(data.blockchain_tx_hash);
-                document.getElementById('block-number').textContent = data.block_number || 'N/A';
-                document.getElementById('confirmations').textContent = data.confirmations || 'N/A';
-                
-                // Store full text for copy buttons
-                copyTxBtn.dataset.fullText = data.tx_id || '';
-                copyHashBtn.dataset.fullText = data.blockchain_tx_hash || '';
-
-                initialView.style.display = 'none';
-                statusView.style.display = 'none';
-                resultView.style.display = 'block';
-            }
-            
-            function resetApp() {
-                stopQrScanner();
-                initialView.style.display = 'block';
-                statusView.style.display = 'none';
-                resultView.style.display = 'none';
-                productIdInput.value = '';
-                qrReaderElement.style.display = 'none';
-                qrReaderElement.classList.remove('scanner-active');
-                scanQrBtn.disabled = false;
-                qrScanResult.innerHTML = '';
-            }
-
-            function startQrScanner() {
-                qrReaderElement.style.display = 'block';
-                scanQrBtn.disabled = true;
-                if (!html5QrCode) { html5QrCode = new Html5Qrcode("qr-reader"); }
-                qrReaderElement.classList.add('scanner-active');
-                qrScanResult.innerHTML = `<span class="text-blue-400">Starting camera...</span>`;
+                html5QrCode = new Html5Qrcode("reader");
                 const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-                const onScanSuccess = (decodedText) => {
-                    qrScanResult.innerHTML = `<span class="text-green-400">Scan successful!</span>`;
-                    stopQrScanner();
-                    productIdInput.value = decodedText;
-                    findProduct(decodedText);
-                };
-                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-                    .catch(err => {
-                        qrScanResult.innerHTML = `<span class="text-red-400">Camera error: ${err}.</span>`;
-                        qrReaderElement.classList.remove('scanner-active');
-                        scanQrBtn.disabled = false;
-                    });
-            }
 
-            function stopQrScanner() {
-                if (html5QrCode && html5QrCode.isScanning) {
-                    html5QrCode.stop().catch(err => {});
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        // Success
+                        handleScanSuccess(decodedText);
+                    },
+                    (errorMessage) => {
+                        // error - ignore for UI cleanliness
+                    }
+                ).catch(err => {
+                    console.error(err);
+                    alert("Camera permission denied or error starting camera.");
+                    toggleScanner(); // Reset UI
+                });
+            }
+            lucide.createIcons();
+        }
+
+        function handleManualVerify() {
+            const input = document.getElementById('manual-id');
+            const val = input.value.trim();
+            if (!val) {
+                showModal('Error', 'Please enter a valid Product ID.', 'error');
+                return;
+            }
+            handleScanSuccess(val);
+        }
+
+        async function handleScanSuccess(decodedText) {
+            // Stop scanner if running
+            if (isScanning) await toggleScanner();
+
+            // Show loading
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('action-btn').disabled = true;
+
+            try {
+                // 1. Fetch from Supabase
+                const { data, error } = await supabaseClient
+                    .from('products')
+                    .select('*')
+                    .ilike('item_id', decodedText)
+                    .single();
+
+                if (error || !data) {
+                    throw new Error("Product not found");
                 }
+
+                currentProduct = data;
+
+                // 2. Add to History
+                addToHistory(data);
+
+                // 3. Populate and Show Details
+                populateDetails(data);
+
+                // Enable details tab
+                const detailsNav = document.getElementById('nav-details');
+                detailsNav.disabled = false;
+                detailsNav.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                navigate('details');
+
+            } catch (err) {
+                console.error(err);
+                showModal('Product Not Found', `We could not find a record for ID: <b>${decodedText}</b><br>Please try again.`, 'error');
+            } finally {
+                document.getElementById('loading-indicator').classList.add('hidden');
+                document.getElementById('action-btn').disabled = false;
             }
-            
-            // --- EVENT LISTENERS & INITIALIZATION ---
-            verifyBtn.addEventListener('click', () => {
-                const productId = productIdInput.value;
-                if (productId) { findProduct(productId); }
-            });
-            
-            productIdInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') { verifyBtn.click(); }
-            });
+        }
 
-            scanQrBtn.addEventListener('click', () => {
-                if (qrReaderElement.style.display === 'none') { startQrScanner(); }
-                else { stopQrScanner(); }
-            });
+        // --- DATA & UI ---
+        function populateDetails(data) {
+            document.getElementById('detail-id').textContent = data.item_id || 'N/A';
+            document.getElementById('detail-supplier').textContent = data.supplier || 'Unknown Supplier';
+            document.getElementById('detail-serial').textContent = data.serial_no || 'N/A';
+            document.getElementById('detail-date').textContent = new Date(data.timestamp).toLocaleDateString() || 'N/A';
+            document.getElementById('detail-hash').textContent = data.blockchain_tx_hash || 'Pending';
+            document.getElementById('detail-block').textContent = data.block_number || '-';
 
-            resetBtn.addEventListener('click', resetApp);
-            
-            copyHashBtn.addEventListener('click', (e) => {
-                navigator.clipboard.writeText(e.currentTarget.dataset.fullText);
-            });
-            
-            copyTxBtn.addEventListener('click', (e) => {
-                navigator.clipboard.writeText(e.currentTarget.dataset.fullText);
-            });
+            const statusEl = document.getElementById('detail-contract-status');
+            statusEl.textContent = data.smart_contract_status || 'UNKNOWN';
 
-            // Load the product list into the table when the app starts
-            loadProductIdsForTable();
+            // Logic for status color
+            if (data.smart_contract_status === 'VERIFIED') statusEl.className = 'font-bold text-sm text-green-400';
+            else statusEl.className = 'font-bold text-sm text-yellow-500';
+        }
+
+        function addToHistory(item) {
+            // Avoid duplicates at top
+            scanHistory = scanHistory.filter(h => h.item_id !== item.item_id);
+            scanHistory.unshift({
+                item_id: item.item_id,
+                supplier: item.supplier,
+                timestamp: new Date().toISOString(),
+                status: item.smart_contract_status
+            });
+            // Limit to 20
+            if (scanHistory.length > 20) scanHistory.pop();
+            localStorage.setItem('authentichain_history', JSON.stringify(scanHistory));
+        }
+
+        function renderQuickHistory() {
+            const list = document.getElementById('quick-history-list');
+            if (scanHistory.length === 0) {
+                list.innerHTML = `<div class="col-span-2 text-center py-8 text-slate-600 text-sm italic border border-dashed border-slate-700/50 rounded-2xl">No recent scans</div>`;
+                return;
+            }
+
+            // Show only top 2
+            const recent = scanHistory.slice(0, 2);
+            list.innerHTML = recent.map(item => `
+                <div onclick="handleRevisit('${item.item_id}')" class="bg-[#1e2633] p-4 rounded-2xl border border-slate-800 active:scale-95 transition-transform cursor-pointer">
+                    <p class="text-[10px] text-gray-500 uppercase">Product ID</p>
+                    <p class="text-sm font-bold text-blue-400 truncate">${item.item_id}</p>
+                    <p class="text-[10px] text-gray-500 mt-2 uppercase">Supplier</p>
+                    <p class="text-xs text-slate-300 truncate">${item.supplier}</p>
+                </div>
+            `).join('');
+        }
+
+        function renderHistoryFull() {
+            const container = document.getElementById('history-list');
+            const emptyState = document.getElementById('empty-history');
+
+            if (scanHistory.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            container.innerHTML = scanHistory.map(item => `
+                <div onclick="handleRevisit('${item.item_id}')" class="bg-[#1e2633] p-4 rounded-2xl flex items-center gap-4 border border-slate-800 hover:border-blue-500/30 transition cursor-pointer">
+                    <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center flex-shrink-0 text-lg">📦</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-start">
+                            <h4 class="font-bold text-slate-200 truncate pr-2">${item.item_id}</h4>
+                            <span class="text-[10px] text-gray-500 whitespace-nowrap">${new Date(item.timestamp).toLocaleDateString()}</span>
+                        </div>
+                        <p class="text-xs text-gray-400 truncate">${item.supplier}</p>
+                        <span class="text-[10px] px-2 py-0.5 rounded font-bold uppercase mt-1 inline-block ${item.status === 'VERIFIED' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}">
+                            ${item.status || 'CHECKED'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Re-fetch data when clicking history item
+        function handleRevisit(id) {
+            handleScanSuccess(id);
+        }
+
+        // --- MODALS ---
+        function showModal(title, htmlContent, type = 'info') {
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modal-content');
+
+            let iconColor = type === 'error' ? 'text-red-500' : 'text-blue-500';
+            let iconName = type === 'error' ? 'alert-triangle' : 'info';
+
+            content.innerHTML = `
+                <div class="flex justify-center mb-4 ${iconColor}">
+                    <i data-lucide="${iconName}" class="w-12 h-12"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-2">${title}</h2>
+                <div class="text-slate-400 text-sm mb-6">${htmlContent}</div>
+                <button onclick="closeModal()" class="w-full bg-slate-700 hover:bg-slate-600 py-3 rounded-xl font-bold transition">Close</button>
+            `;
+
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('modal-active'), 10);
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.classList.remove('modal-active');
+            setTimeout(() => modal.style.display = 'none', 200);
+        }
+
+        function showConfirmation() {
+            showModal('Confirmed', '<p>You have successfully verified receipt of this authentic product.</p><p class="mt-2 text-green-400">Ownership transfer recorded.</p>', 'success');
+        }
+
+        function showReport() {
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modal-content');
+            content.innerHTML = `
+                <div class="flex justify-center mb-4 text-red-500">
+                    <i data-lucide="alert-triangle" class="w-12 h-12"></i>
+                </div>
+                <h2 class="text-xl font-bold mb-2">Report Issue</h2>
+                <p class="text-gray-400 text-sm mb-4">Why do you suspect this is counterfeit?</p>
+                <textarea id="report-note" class="w-full bg-[#0f172a] border border-gray-700 rounded-xl p-3 text-sm mb-4 text-white focus:border-red-500 outline-none" rows="3" placeholder="e.g. Packaging damaged, invalid hologram..."></textarea>
+                <button onclick="alert('Report Submitted!'); closeModal();" class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold transition">Submit Report</button>
+            `;
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('modal-active'), 10);
+            lucide.createIcons();
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderQuickHistory();
+            lucide.createIcons();
         });
+
     </script>
 </body>
-</html>
 
+</html>
